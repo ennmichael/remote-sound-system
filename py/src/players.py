@@ -1,41 +1,26 @@
-from typing import Optional
+from typing import Optional, Iterator
 
-
-import vlc
 import contextlib
 
-
-class VLCPlayer(contextlib.AbstractContextManager):
-
-    def __init__(self) -> None:
-        self.libvlc = vlc.libvlc_new()
-
-    def free(self) -> None:
-        vlc.libvlc_release(self.libvlc)
-
-    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
-        self.free()
-
-    def play_local_media(self, filename: str) -> None:
-        media = self.local_media(filename)
-        self.play_media(media)
-
-    def play_network_media(self, url: str) -> None:
-        media = self.network_media(url)
-        self.play_media(media)
-
-    def local_media(self, filename: str):
-        pass
-
-    def network_media(self, url: str):
-        pass
-
-    def play_media(self, media):
-        pass
+import vlc
+import pafy
 
 
-class YoutubePlayer:
+def play_youtube_title(title: str) -> None:
+    # If the video is cached, play the local video.
+    # If the video is not cached, play the video from youtube.
 
-    def __init__(self):
-        self.vlc_player = VLCPlayer()
+
+
+def play_media(media: str) -> None:
+    player = releasing(vlc.MediaPlayer(media))
+    player.play()
+
+
+@contextlib.contextmanager
+def releasing(player: vlc.MediaPlayer) -> Iterator[vlc.MediaPlayer]:
+    try:
+        yield player
+    finally:
+        player.release()
 
