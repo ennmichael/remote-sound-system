@@ -1,0 +1,119 @@
+var _user$project$Main$subscriptions = function (model) {
+	return _elm_lang$core$Platform_Sub$none;
+};
+var _user$project$Main$emptyServerStatus = {volume: '', song: ''};
+var _user$project$Main$emptyModel = {serverStatus: _user$project$Main$emptyServerStatus, songInput: ''};
+var _user$project$Main$init = {ctor: '_Tuple2', _0: _user$project$Main$emptyModel, _1: _elm_lang$core$Platform_Cmd$none};
+var _user$project$Main$serverUrl = 'localhost:8000';
+var _user$project$Main$ServerStatus = F2(
+	function (a, b) {
+		return {volume: a, song: b};
+	});
+var _user$project$Main$statusDecoder = A3(
+	_elm_lang$core$Json_Decode$map2,
+	_user$project$Main$ServerStatus,
+	A2(_elm_lang$core$Json_Decode$field, 'volume', _elm_lang$core$Json_Decode$string),
+	A2(_elm_lang$core$Json_Decode$field, 'song', _elm_lang$core$Json_Decode$string));
+var _user$project$Main$playRequest = function (songTitle) {
+	var valueToEncode = _elm_lang$core$Json_Encode$object(
+		{
+			ctor: '::',
+			_0: {
+				ctor: '_Tuple2',
+				_0: 'request',
+				_1: _elm_lang$core$Json_Encode$string(
+					A2(_elm_lang$core$Basics_ops['++'], 'play ', songTitle))
+			},
+			_1: {ctor: '[]'}
+		});
+	var body = A2(
+		_elm_lang$http$Http$stringBody,
+		'application/json',
+		A2(_elm_lang$core$Json_Encode$encode, 0, valueToEncode));
+	return A3(_elm_lang$http$Http$post, _user$project$Main$serverUrl, body, _user$project$Main$statusDecoder);
+};
+var _user$project$Main$statusRequest = A2(
+	_elm_lang$http$Http$get,
+	A2(_elm_lang$core$Basics_ops['++'], _user$project$Main$serverUrl, '/status'),
+	_user$project$Main$statusDecoder);
+var _user$project$Main$Model = F2(
+	function (a, b) {
+		return {serverStatus: a, songInput: b};
+	});
+var _user$project$Main$ServerResponse = function (a) {
+	return {ctor: 'ServerResponse', _0: a};
+};
+var _user$project$Main$update = F2(
+	function (msg, model) {
+		var _p0 = msg;
+		switch (_p0.ctor) {
+			case 'UpdateSongInput':
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{songInput: _p0._0}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
+			case 'PlaySong':
+				return {
+					ctor: '_Tuple2',
+					_0: _user$project$Main$emptyModel,
+					_1: A2(
+						_elm_lang$http$Http$send,
+						_user$project$Main$ServerResponse,
+						_user$project$Main$playRequest(model.songInput))
+				};
+			default:
+				return {ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none};
+		}
+	});
+var _user$project$Main$PlaySong = {ctor: 'PlaySong'};
+var _user$project$Main$UpdateSongInput = function (a) {
+	return {ctor: 'UpdateSongInput', _0: a};
+};
+var _user$project$Main$view = function (model) {
+	return A2(
+		_elm_lang$html$Html$div,
+		{ctor: '[]'},
+		{
+			ctor: '::',
+			_0: A2(
+				_elm_lang$html$Html$input,
+				{
+					ctor: '::',
+					_0: _elm_lang$html$Html_Events$onInput(_user$project$Main$UpdateSongInput),
+					_1: {
+						ctor: '::',
+						_0: _elm_lang$html$Html_Attributes$placeholder('Song Name'),
+						_1: {ctor: '[]'}
+					}
+				},
+				{ctor: '[]'}),
+			_1: {
+				ctor: '::',
+				_0: A2(
+					_elm_lang$html$Html$br,
+					{ctor: '[]'},
+					{ctor: '[]'}),
+				_1: {
+					ctor: '::',
+					_0: A2(
+						_elm_lang$html$Html$button,
+						{
+							ctor: '::',
+							_0: _elm_lang$html$Html_Events$onClick(_user$project$Main$PlaySong),
+							_1: {ctor: '[]'}
+						},
+						{
+							ctor: '::',
+							_0: _elm_lang$html$Html$text('Play'),
+							_1: {ctor: '[]'}
+						}),
+					_1: {ctor: '[]'}
+				}
+			}
+		});
+};
+var _user$project$Main$main = _elm_lang$html$Html$program(
+	{init: _user$project$Main$init, update: _user$project$Main$update, subscriptions: _user$project$Main$subscriptions, view: _user$project$Main$view})();
