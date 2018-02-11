@@ -46,7 +46,7 @@ playRequest songTitle =
 
     valueToEncode =
       Json.Encode.object
-        [("request", Json.Encode.string ("play " ++ songTitle))
+        [("play", Json.Encode.string songTitle)
         ]
   in
     Http.post serverUrl body statusDecoder
@@ -94,7 +94,7 @@ update msg model =
       )
 
     PlaySong ->
-      ( emptyModel
+      ( model
       , Http.send ServerResponse (playRequest model.songInput)
       )
 

@@ -20,9 +20,8 @@ var _user$project$Main$playRequest = function (songTitle) {
 			ctor: '::',
 			_0: {
 				ctor: '_Tuple2',
-				_0: 'request',
-				_1: _elm_lang$core$Json_Encode$string(
-					A2(_elm_lang$core$Basics_ops['++'], 'play ', songTitle))
+				_0: 'play',
+				_1: _elm_lang$core$Json_Encode$string(songTitle)
 			},
 			_1: {ctor: '[]'}
 		});
@@ -58,7 +57,7 @@ var _user$project$Main$update = F2(
 			case 'PlaySong':
 				return {
 					ctor: '_Tuple2',
-					_0: _user$project$Main$emptyModel,
+					_0: model,
 					_1: A2(
 						_elm_lang$http$Http$send,
 						_user$project$Main$ServerResponse,

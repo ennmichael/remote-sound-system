@@ -1,47 +1,54 @@
 #!/usr/bin/env python3
 
 
-'''
-Request formats
-/play:title to play a song with a certain title.
-/index to show the index interface.
-
-Possible additions: /cache to browse cached music, /clear to remove something from cache.
-'''
-
-
 import http.server
-import urllib
 import shutil
 import io
 
-from jukebox import Jukebox
+from player import Player, releasing
 
 
 STATUS_PATH = '/status'
+PAUSE_PATH = '/pause'
+INCREASE_VOLUME_PATH = '/increasevolume'
+DECREASE_VOLUME_PATH = '/decreasevolume'
+# TODO Have an option to continue playing a song
+
+PLAY_PATH_PREFIX = '/play/'
 
 
-class HTTPHandler(http.server.SimpleHTTPRequestHandler):
+with releasing(Player()) as player:
+    class RequestHandler(http.server.SimpleHTTPRequestHandler):
 
-    def __init__(self)
+        def do_GET(self) -> None:
+            if self.path == STATUS_PATH:
+                self.serve_status()
+            else:
+                super().do_GET()
 
-    def do_POST(self) -> None:
-        def parse_song_title(path: str) -> str:
-            return ''
+        def do_POST(self) -> None:
+            if self.path == PAUSE_PATH:
+                player.pause()
+            elif self.path == INCREASE_VOLUME_PATH:
+                player.increase_volume()
+            elif self.path == DECREASE_VOLUME_PATH:
+                player.decrease_volume()
+            elif self.path.startswith(PLAY_PATH_PREFIX):
+                self.handle_play_request()
+            else:
+                super().do_POST()
 
-        if self.path.startswith(PLAY_PATH_PREFIX):
-            song_title = parse_song_title(self.path)
-            play_song(song_title)
+        def handle_play_request(self) -> None:
+            song = self.path[len(PLAY_PATH_PREFIX):]
+            player.play(song)
+            self.serve_status()
 
-    def serve_data(self, data: bytes) -> None:
-        pass
+        def serve_status(self) -> None:
+            status = str.encode(player.status_json())
+            self.wfile.write(status)
 
-
-def play_song(song_title: str) -> None:
-    pass
-
-
-server_address = ('', 8000)
-server = http.server.HTTPServer(server_address, HTTPHandler)
-server.serve_forever()
+    
+    server_address = ('', 8000)
+    server = http.server.HTTPServer(server_address, RequestHandler)
+    server.serve_forever()
 
