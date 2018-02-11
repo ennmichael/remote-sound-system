@@ -18,13 +18,19 @@ class SongNotCached(BaseException):
     pass
 
 
-def song_media(song: str) -> vlc.Media:
-    search_hit = find_on_youtube(song)
+class SongMedia(NamedTuple):
+
+    title: str
+    vlc_media: vlc.Media
+
+
+def song_media(song: str) -> SongMedia
+    title, url = find_on_youtube(song)
 
     try:
-        return cached_song_media(search_hit.title)
+        return SongMedia(title, cached_song_media(title))
     except SongNotCached:
-        return online_song_media(search_hit.url)
+        return SongMedia(title, online_song_media(url))
 
 
 def cached_song_media(title: str) -> vlc.Media:
@@ -81,31 +87,65 @@ def find_on_youtube(search_query: str) -> YoutubeSearchHit:
 
 class Player:
 
+    DEFAULT_VOLUME_DELTA = 10
+
     def __init__(self) -> None:
         self.vlc_player = vlc.MediaPlayer()
+        self.song: Optional[str] = None
 
     def play(self, song: str) -> None:
-        # TODO Do we need to release the media that is currently playing before playing the next one?
         media = song_media(song)
         self.vlc_player.set_media(media)
         self.vlc_player.play()
 
-    def pause(self) -> None:
+    def toggle_pause(self) -> None:
         self.vlc_player.pause()
 
-    def increase_volume(self) -> None:
-        pass
+    def is_paused(self) -> bool:
+        return self.vlc_player.get_state() == vlc.State.Paused
 
-    def decrease_volume(self) -> None:
-        pass
+    def is_playing(self) -> bool:
+        return self.vlc_player.get_state() == vlc.State.Playing
+
+    def increase_volume(self, delta: int=DEFAULT_VOLUME_DELTA) -> None:
+        self.set_volume(self.volume() + delta)
+
+    def decrease_volume(self, delta: int=DEFAULT_VOLUME_DELTA) -> None:
+        self.set_volume(self.volume() - delta)
+
+    def set_volume(self, volume: int) -> None:
+        if volume < 0:
+            self.set_volume(0)
+        elif volume > 100:
+            self.set_volume(100)
+        else:
+            self.set_volume(volume)
+
+    def volume(self) -> int:
+        return self.vlc_player.audio_get_volume()
 
     def release(self) -> None:
         self.vlc_player.release()
 
     def status(self) -> Dict[str, str]:
-        return { # TODO Currently, a dummy implementation
-            'volume': 'volume',
-            'song': 'song'
+        def state_str() -> str:
+            if self.is_playing():
+                return 'playing'
+            elif self.is_paused():
+                return 'paused'
+            else:
+                return '-'
+
+        def song_str() -> str:
+            if self.is_playing() or self.is_paused():
+                return self.song
+            else:
+                return '-'
+
+        return {
+            'volume': str(self.volume()),
+            'song': song_str(),
+            'state': state_str()
         }
 
     def status_json(self) -> str:
@@ -116,9 +156,9 @@ Releasable = TypeVar('Releasable', Player, vlc.MediaPlayer, vlc.Media)
 
 
 @contextlib.contextmanager
-def releasing(player: Releasable) -> Iterator[Releasable]:
+def releasing(releasable: Releasable) -> Iterator[Releasable]:
     try:
-        yield player
+        yield releasable
     finally:
-        player.release()
+        releasable.release()
 

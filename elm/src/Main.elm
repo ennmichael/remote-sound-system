@@ -13,6 +13,7 @@ serverUrl =
 type alias ServerStatus =
   { volume : String
   , song : String
+  , state: String
   }
 
 
@@ -30,10 +31,11 @@ type alias Model =
 
 statusDecoder : Json.Decode.Decoder ServerStatus
 statusDecoder =
-  Json.Decode.map2
+  Json.Decode.map3
     ServerStatus
     (Json.Decode.field "volume" Json.Decode.string)
     (Json.Decode.field "song" Json.Decode.string)
+    (Json.Decode.field "state" Json.Decode.string)
 
 
 playRequest : String -> Http.Request ServerStatus
@@ -80,8 +82,9 @@ emptyModel =
 
 emptyServerStatus : ServerStatus
 emptyServerStatus =
-  { volume = ""
-  , song = ""
+  { volume = "-"
+  , song = "-"
+  , state = "-"
   }
 
 
@@ -107,6 +110,13 @@ update msg model =
 subscriptions : Model -> Sub msg
 subscriptions model =
   Sub.none
+
+
+serverStatusForHumans : ServerStatus -> String
+serverStatusForHumans serverStatus =
+  "Song: " ++ serverStatus.song ++ "\n" ++
+  "Volume: " ++ serverStatus.volume ++ "\n" ++
+  "State: " ++ serverStatus.state ++ "\n"
 
 
 view : Model -> Html Msg

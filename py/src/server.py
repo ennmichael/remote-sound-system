@@ -9,10 +9,9 @@ from player import Player, releasing
 
 
 STATUS_PATH = '/status'
-PAUSE_PATH = '/pause'
+TOGGLE_PAUSE_PATH = '/togglepause'
 INCREASE_VOLUME_PATH = '/increasevolume'
 DECREASE_VOLUME_PATH = '/decreasevolume'
-# TODO Have an option to continue playing a song
 
 PLAY_PATH_PREFIX = '/play/'
 

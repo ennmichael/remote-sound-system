@@ -1,19 +1,44 @@
+var _user$project$Main$serverStatusForHumans = function (serverStatus) {
+	return A2(
+		_elm_lang$core$Basics_ops['++'],
+		'Song: ',
+		A2(
+			_elm_lang$core$Basics_ops['++'],
+			serverStatus.song,
+			A2(
+				_elm_lang$core$Basics_ops['++'],
+				'\n',
+				A2(
+					_elm_lang$core$Basics_ops['++'],
+					'Volume: ',
+					A2(
+						_elm_lang$core$Basics_ops['++'],
+						serverStatus.volume,
+						A2(
+							_elm_lang$core$Basics_ops['++'],
+							'\n',
+							A2(
+								_elm_lang$core$Basics_ops['++'],
+								'State: ',
+								A2(_elm_lang$core$Basics_ops['++'], serverStatus.state, '\n'))))))));
+};
 var _user$project$Main$subscriptions = function (model) {
 	return _elm_lang$core$Platform_Sub$none;
 };
-var _user$project$Main$emptyServerStatus = {volume: '', song: ''};
+var _user$project$Main$emptyServerStatus = {volume: '-', song: '-', state: '-'};
 var _user$project$Main$emptyModel = {serverStatus: _user$project$Main$emptyServerStatus, songInput: ''};
 var _user$project$Main$init = {ctor: '_Tuple2', _0: _user$project$Main$emptyModel, _1: _elm_lang$core$Platform_Cmd$none};
 var _user$project$Main$serverUrl = 'localhost:8000';
-var _user$project$Main$ServerStatus = F2(
-	function (a, b) {
-		return {volume: a, song: b};
+var _user$project$Main$ServerStatus = F3(
+	function (a, b, c) {
+		return {volume: a, song: b, state: c};
 	});
-var _user$project$Main$statusDecoder = A3(
-	_elm_lang$core$Json_Decode$map2,
+var _user$project$Main$statusDecoder = A4(
+	_elm_lang$core$Json_Decode$map3,
 	_user$project$Main$ServerStatus,
 	A2(_elm_lang$core$Json_Decode$field, 'volume', _elm_lang$core$Json_Decode$string),
-	A2(_elm_lang$core$Json_Decode$field, 'song', _elm_lang$core$Json_Decode$string));
+	A2(_elm_lang$core$Json_Decode$field, 'song', _elm_lang$core$Json_Decode$string),
+	A2(_elm_lang$core$Json_Decode$field, 'state', _elm_lang$core$Json_Decode$string));
 var _user$project$Main$playRequest = function (songTitle) {
 	var valueToEncode = _elm_lang$core$Json_Encode$object(
 		{
