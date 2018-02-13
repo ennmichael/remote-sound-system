@@ -8998,37 +8998,49 @@ var _elm_lang$http$Http$StringPart = F2(
 		return {ctor: 'StringPart', _0: a, _1: b};
 	});
 var _elm_lang$http$Http$stringPart = _elm_lang$http$Http$StringPart;
-var _user$project$Main$serverStatusForHumans = function (serverStatus) {
+var _user$project$Main$serverStatusView = function (serverStatus) {
 	return A2(
-		_elm_lang$core$Basics_ops['++'],
-		'Song: ',
-		A2(
-			_elm_lang$core$Basics_ops['++'],
-			serverStatus.song,
-			A2(
-				_elm_lang$core$Basics_ops['++'],
-				'\n',
-				A2(
-					_elm_lang$core$Basics_ops['++'],
-					'Volume: ',
-					A2(
-						_elm_lang$core$Basics_ops['++'],
-						serverStatus.volume,
-						A2(
-							_elm_lang$core$Basics_ops['++'],
-							'\n',
-							A2(
-								_elm_lang$core$Basics_ops['++'],
-								'State: ',
-								A2(_elm_lang$core$Basics_ops['++'], serverStatus.state, '\n'))))))));
+		_elm_lang$html$Html$div,
+		{ctor: '[]'},
+		{
+			ctor: '::',
+			_0: _elm_lang$html$Html$text(
+				A2(_elm_lang$core$Basics_ops['++'], 'Song: ', serverStatus.song)),
+			_1: {
+				ctor: '::',
+				_0: A2(
+					_elm_lang$html$Html$br,
+					{ctor: '[]'},
+					{ctor: '[]'}),
+				_1: {
+					ctor: '::',
+					_0: _elm_lang$html$Html$text(
+						A2(_elm_lang$core$Basics_ops['++'], 'Volume: ', serverStatus.volume)),
+					_1: {
+						ctor: '::',
+						_0: A2(
+							_elm_lang$html$Html$br,
+							{ctor: '[]'},
+							{ctor: '[]'}),
+						_1: {
+							ctor: '::',
+							_0: _elm_lang$html$Html$text(
+								A2(_elm_lang$core$Basics_ops['++'], 'State: ', serverStatus.state)),
+							_1: {ctor: '[]'}
+						}
+					}
+				}
+			}
+		});
 };
 var _user$project$Main$subscriptions = function (model) {
 	return _elm_lang$core$Platform_Sub$none;
 };
+var _user$project$Main$errorServerStatus = {volume: 'ERROR', song: 'ERROR', state: 'ERROR'};
 var _user$project$Main$emptyServerStatus = {volume: '-', song: '-', state: '-'};
 var _user$project$Main$emptyModel = {serverStatus: _user$project$Main$emptyServerStatus, songInput: ''};
 var _user$project$Main$init = {ctor: '_Tuple2', _0: _user$project$Main$emptyModel, _1: _elm_lang$core$Platform_Cmd$none};
-var _user$project$Main$serverUrl = 'localhost:8000';
+var _user$project$Main$serverUrl = 'http://localhost:8000';
 var _user$project$Main$ServerStatus = F3(
 	function (a, b, c) {
 		return {volume: a, song: b, state: c};
@@ -9040,21 +9052,11 @@ var _user$project$Main$statusDecoder = A4(
 	A2(_elm_lang$core$Json_Decode$field, 'song', _elm_lang$core$Json_Decode$string),
 	A2(_elm_lang$core$Json_Decode$field, 'state', _elm_lang$core$Json_Decode$string));
 var _user$project$Main$playRequest = function (songTitle) {
-	var valueToEncode = _elm_lang$core$Json_Encode$object(
-		{
-			ctor: '::',
-			_0: {
-				ctor: '_Tuple2',
-				_0: 'play',
-				_1: _elm_lang$core$Json_Encode$string(songTitle)
-			},
-			_1: {ctor: '[]'}
-		});
-	var body = A2(
-		_elm_lang$http$Http$stringBody,
-		'application/json',
-		A2(_elm_lang$core$Json_Encode$encode, 0, valueToEncode));
-	return A3(_elm_lang$http$Http$post, _user$project$Main$serverUrl, body, _user$project$Main$statusDecoder);
+	var playPath = A2(
+		_elm_lang$core$Basics_ops['++'],
+		_user$project$Main$serverUrl,
+		A2(_elm_lang$core$Basics_ops['++'], '/play/', songTitle));
+	return A3(_elm_lang$http$Http$post, playPath, _elm_lang$http$Http$emptyBody, _user$project$Main$statusDecoder);
 };
 var _user$project$Main$statusRequest = A2(
 	_elm_lang$http$Http$get,
@@ -9089,7 +9091,23 @@ var _user$project$Main$update = F2(
 						_user$project$Main$playRequest(model.songInput))
 				};
 			default:
-				return {ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none};
+				if (_p0._0.ctor === 'Err') {
+					return {
+						ctor: '_Tuple2',
+						_0: _elm_lang$core$Native_Utils.update(
+							model,
+							{serverStatus: _user$project$Main$errorServerStatus}),
+						_1: _elm_lang$core$Platform_Cmd$none
+					};
+				} else {
+					return {
+						ctor: '_Tuple2',
+						_0: _elm_lang$core$Native_Utils.update(
+							model,
+							{serverStatus: _p0._0._0}),
+						_1: _elm_lang$core$Platform_Cmd$none
+					};
+				}
 		}
 	});
 var _user$project$Main$PlaySong = {ctor: 'PlaySong'};
@@ -9134,7 +9152,25 @@ var _user$project$Main$view = function (model) {
 							_0: _elm_lang$html$Html$text('Play'),
 							_1: {ctor: '[]'}
 						}),
-					_1: {ctor: '[]'}
+					_1: {
+						ctor: '::',
+						_0: A2(
+							_elm_lang$html$Html$br,
+							{ctor: '[]'},
+							{ctor: '[]'}),
+						_1: {
+							ctor: '::',
+							_0: A2(
+								_elm_lang$html$Html$br,
+								{ctor: '[]'},
+								{ctor: '[]'}),
+							_1: {
+								ctor: '::',
+								_0: _user$project$Main$serverStatusView(model.serverStatus),
+								_1: {ctor: '[]'}
+							}
+						}
+					}
 				}
 			}
 		});

@@ -7,7 +7,7 @@ import Http
 
 
 serverUrl =
-  "localhost:8000"
+  "http://localhost:8000"
 
 
 type alias ServerStatus =
@@ -41,17 +41,10 @@ statusDecoder =
 playRequest : String -> Http.Request ServerStatus
 playRequest songTitle =
   let
-    body =
-      Http.stringBody
-        "application/json" 
-        (Json.Encode.encode 0 valueToEncode)
-
-    valueToEncode =
-      Json.Encode.object
-        [("play", Json.Encode.string songTitle)
-        ]
+    playPath =
+      serverUrl ++ "/play/" ++ songTitle
   in
-    Http.post serverUrl body statusDecoder
+    Http.post playPath Http.emptyBody statusDecoder
 
 
 statusRequest : Http.Request ServerStatus
@@ -88,6 +81,14 @@ emptyServerStatus =
   }
 
 
+errorServerStatus : ServerStatus
+errorServerStatus = -- TODO How about: proper error handling
+  { volume = "ERROR"
+  , song = "ERROR"
+  , state = "ERROR"
+  }
+
+
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
@@ -101,8 +102,13 @@ update msg model =
       , Http.send ServerResponse (playRequest model.songInput)
       )
 
-    ServerResponse response -> -- TODO We should have *some* error handling here
-      ( model
+    ServerResponse (Err err) ->
+      ( {model | serverStatus = errorServerStatus}
+      , Cmd.none
+      )
+
+    ServerResponse (Ok status) ->
+      ( {model | serverStatus = status}
       , Cmd.none
       )
 
@@ -110,13 +116,6 @@ update msg model =
 subscriptions : Model -> Sub msg
 subscriptions model =
   Sub.none
-
-
-serverStatusForHumans : ServerStatus -> String
-serverStatusForHumans serverStatus =
-  "Song: " ++ serverStatus.song ++ "\n" ++
-  "Volume: " ++ serverStatus.volume ++ "\n" ++
-  "State: " ++ serverStatus.state ++ "\n"
 
 
 view : Model -> Html Msg
@@ -132,5 +131,22 @@ view model =
     , Html.button
         [Html.Events.onClick PlaySong]
         [Html.text "Play"]
+    , Html.br [] []
+    , Html.br [] []
+    , serverStatusView model.serverStatus
+    ]
+
+
+serverStatusView : ServerStatus -> Html Msg
+serverStatusView serverStatus = -- TODO Make these align nicely.
+  Html.div
+    []
+    [ Html.text ("Song: " ++ serverStatus.song)
+    , Html.br [] []
+
+    , Html.text ("Volume: " ++ serverStatus.volume)
+    , Html.br [] []
+
+    , Html.text ("State: " ++ serverStatus.state)
     ]
 

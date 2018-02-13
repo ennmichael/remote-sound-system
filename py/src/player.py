@@ -24,7 +24,7 @@ class SongMedia(NamedTuple):
     vlc_media: vlc.Media
 
 
-def song_media(song: str) -> SongMedia
+def song_media(song: str) -> SongMedia:
     title, url = find_on_youtube(song)
 
     try:
@@ -91,7 +91,7 @@ class Player:
 
     def __init__(self) -> None:
         self.vlc_player = vlc.MediaPlayer()
-        self.song: Optional[str] = None
+        self.song = ''
 
     def play(self, song: str) -> None:
         media = song_media(song)
@@ -102,10 +102,10 @@ class Player:
         self.vlc_player.pause()
 
     def is_paused(self) -> bool:
-        return self.vlc_player.get_state() == vlc.State.Paused
+        return bool(self.vlc_player.get_state() == vlc.State.Paused)
 
     def is_playing(self) -> bool:
-        return self.vlc_player.get_state() == vlc.State.Playing
+        return bool(self.vlc_player.get_state() == vlc.State.Playing)
 
     def increase_volume(self, delta: int=DEFAULT_VOLUME_DELTA) -> None:
         self.set_volume(self.volume() + delta)
@@ -122,7 +122,7 @@ class Player:
             self.set_volume(volume)
 
     def volume(self) -> int:
-        return self.vlc_player.audio_get_volume()
+        return int(self.vlc_player.audio_get_volume())
 
     def release(self) -> None:
         self.vlc_player.release()

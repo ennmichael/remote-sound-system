@@ -16,6 +16,11 @@ DECREASE_VOLUME_PATH = '/decreasevolume'
 PLAY_PATH_PREFIX = '/play/'
 
 
+class InvalidRequest(BaseException):
+
+    pass
+
+
 with releasing(Player()) as player:
     class RequestHandler(http.server.SimpleHTTPRequestHandler):
 
@@ -26,16 +31,26 @@ with releasing(Player()) as player:
                 super().do_GET()
 
         def do_POST(self) -> None:
-            if self.path == PAUSE_PATH:
-                player.pause()
-            elif self.path == INCREASE_VOLUME_PATH:
-                player.increase_volume()
-            elif self.path == DECREASE_VOLUME_PATH:
-                player.decrease_volume()
-            elif self.path.startswith(PLAY_PATH_PREFIX):
-                self.handle_play_request()
-            else:
-                super().do_POST()
+            print(f'Post at path {self.path}')
+
+            def interpret_request():
+                if self.path == TOGGLE_PAUSE_PATH:
+                    player.toggle_pause()
+                elif self.path == INCREASE_VOLUME_PATH:
+                    player.increase_volume()
+                elif self.path == DECREASE_VOLUME_PATH:
+                    player.decrease_volume()
+                elif self.path.startswith(PLAY_PATH_PREFIX):
+                    self.handle_play_request()
+                else:
+                    raise InvalidRequest 
+
+            try:
+                interpret_request()
+                self.send_response(http.server.HTTPStatus.OK)
+                self.end_headers()
+            except InvalidRequest:
+                self.send_error(http.server.HTTPStatus.BAD_REQUEST) 
 
         def handle_play_request(self) -> None:
             song = self.path[len(PLAY_PATH_PREFIX):]
