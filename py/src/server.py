@@ -6,6 +6,7 @@ import http.server
 import shutil
 import urllib.parse
 import io
+import json # TODO Remove this
 
 
 from player import YoutubePlayer, releasing
@@ -43,28 +44,29 @@ with releasing(YoutubePlayer()) as player:
                     player.decrease_volume()
                 elif self.path.startswith(PLAY_PATH_PREFIX):
                     self.handle_play_request()
-                else:
-                    raise InvalidRequest 
 
-            try:
-                interpret_request()
-                self.send_response(http.HTTPStatus.OK)
-                self.end_headers()
-            except InvalidRequest:
-                self.send_error(http.HTTPStatus.BAD_REQUEST)
+            self.end_response_ok()
+            self.serve_status()
+            interpret_request()
+
+        def end_response(self, status: http.HTTPStatus) -> None:
+            self.send_response(status)
+            self.end_headers()
+
+        def end_response_ok(self) -> None:
+            self.end_response(http.HTTPStatus.OK)
 
         def handle_play_request(self) -> None:
             def parse_song(path: str) -> str:
-                quoted_song = self.path[len(PLAY_PATH_PREFIX):]
+                quoted_song = path[len(PLAY_PATH_PREFIX):]
                 return urllib.parse.unquote(quoted_song)
 
-            song = self.path[len(PLAY_PATH_PREFIX):]
+            song = parse_song(self.path)
             player.play(song)
-            self.serve_status()
 
         def serve_status(self) -> None:
-            status = str.encode(player.status_json())
-            self.wfile.write(status)
+            status = player.status_json()
+            self.wfile.write(str.encode(status))
 
     
     server_address = ('', 8000)

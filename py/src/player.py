@@ -90,13 +90,15 @@ def find_on_youtube(search_query: str) -> YoutubeVideo:
         url = f'https://www.youtube.com/results?search_query={search_query}'
         return load_webpage(url)
 
-    def parse_html(html: str) -> YoutubeVideo:
+    def top_video_url(html: str) -> str:
         query = PyQuery(html)
         match = query('a#video-title').eq(0)
         href = match.attr("href")
-        url = f'https://www.youtube.com/{href}'# TODO This ought to be a separate function
-        video = pafy.new(url)
+        return f'https://www.youtube.com/{href}'
 
+    def parse_html(html: str) -> YoutubeVideo:
+        url = top_video_url(html)
+        video = pafy.new(url)
         return YoutubeVideo(
             title=video.title,
             url=video.getbestaudio().url)
@@ -112,12 +114,10 @@ class YoutubePlayer:
     def __init__(self) -> None:
         self.vlc_player = vlc.MediaPlayer()
         self.song = ''
+        self.set_volume(100)
 
     def play(self, song: str) -> None:
         title, media = song_media(song)
-
-        import pdb; pdb.set_trace()
-
         self.song = title
         self.play_vlc_media(media)
 
@@ -146,7 +146,7 @@ class YoutubePlayer:
         elif volume > 100:
             self.set_volume(100)
         else:
-            self.set_volume(volume)
+            self.vlc_player.audio_set_volume(volume)
 
     def volume(self) -> int:
         return int(self.vlc_player.audio_get_volume())
@@ -157,9 +157,9 @@ class YoutubePlayer:
     def status(self) -> Dict[str, str]:
         def state_str() -> str:
             if self.is_playing():
-                return 'playing'
+                return 'Playing'
             elif self.is_paused():
-                return 'paused'
+                return 'Paused'
             else:
                 return '-'
 

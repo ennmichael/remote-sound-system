@@ -4,6 +4,7 @@ import Html.Attributes
 import Json.Decode
 import Json.Encode
 import Http
+import Time exposing (Time)
 
 
 serverUrl =
@@ -19,8 +20,12 @@ type alias ServerStatus =
 
 type Msg
   = UpdateSongInput String
-  | PlaySong
+  | UpdateStatus Time
   | ServerResponse (Result Http.Error ServerStatus)
+  | PlaySong
+  | IncraseVolume
+  | DecreaseVolume
+  | TogglePause
 
 
 type alias Model = 
@@ -41,15 +46,40 @@ statusDecoder =
 playRequest : String -> Http.Request ServerStatus
 playRequest songTitle =
   let
-    playPath =
+    path =
       serverUrl ++ "/play/" ++ (Http.encodeUri songTitle)
   in
-    Http.post playPath Http.emptyBody statusDecoder
+    serverPostRequest path
+
+
+increaseVolumeRequest : Http.Request ServerStatus
+increaseVolumeRequest =
+  serverPostRequest "/increasevolume"
+
+
+decreaseVolumeRequest : Http.Request ServerStatus
+decreaseVolumeRequest =
+  serverPostRequest "/decreasevolume"
+
+
+togglePauseRequest : Http.Request ServerStatus
+togglePauseRequest =
+  serverPostRequest "/togglepause"
 
 
 statusRequest : Http.Request ServerStatus
 statusRequest =
-  Http.get (serverUrl ++ "/status") statusDecoder
+  serverGetRequest "/status"
+
+
+serverGetRequest : String -> Http.Request ServerStatus
+serverGetRequest path =
+  Http.get (serverUrl ++ path) statusDecoder
+
+
+serverPostRequest : String -> Http.Request ServerStatus
+serverPostRequest path =
+  Http.post path Http.emptyBody statusDecoder
 
 
 main =
@@ -75,14 +105,14 @@ emptyModel =
 
 emptyServerStatus : ServerStatus
 emptyServerStatus =
-  { volume = "-"
+  { volume = "0"
   , song = "-"
   , state = "-"
   }
 
 
 errorServerStatus : ServerStatus
-errorServerStatus = -- TODO How about: proper error handling
+errorServerStatus =
   { volume = "ERROR"
   , song = "ERROR"
   , state = "ERROR"
@@ -91,31 +121,55 @@ errorServerStatus = -- TODO How about: proper error handling
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
-  case msg of
-    UpdateSongInput newInput ->
-      ( {model | songInput = newInput}
-      , Cmd.none
-      )
+  let
+    sendRequest request =
+      Http.send ServerResponse request
+  in
+    case msg of
+      UpdateSongInput newInput ->
+        ( {model | songInput = newInput}
+        , Cmd.none
+        )
 
-    PlaySong ->
-      ( model
-      , Http.send ServerResponse (playRequest model.songInput)
-      )
+      ServerResponse (Err err) ->
+        ( {model | serverStatus = errorServerStatus}
+        , Cmd.none
+        )
 
-    ServerResponse (Err err) ->
-      ( {model | serverStatus = errorServerStatus}
-      , Cmd.none
-      )
+      ServerResponse (Ok status) ->
+        ( {model | serverStatus = status}
+        , Cmd.none
+        )
 
-    ServerResponse (Ok status) ->
-      ( {model | serverStatus = status}
-      , Cmd.none
-      )
+      UpdateStatus _ ->
+        ( model
+        , Http.send ServerResponse statusRequest
+        )
+
+      PlaySong ->
+        ( model
+        , sendRequest (playRequest model.songInput)
+        )
+
+      IncraseVolume ->
+        ( model
+        , sendRequest increaseVolumeRequest
+        )
+
+      DecreaseVolume ->
+        ( model
+        , sendRequest decreaseVolumeRequest
+        )
+
+      TogglePause ->
+        ( model
+        , sendRequest togglePauseRequest
+        )
 
 
-subscriptions : Model -> Sub msg
+subscriptions : Model -> Sub Msg
 subscriptions model =
-  Sub.none
+  Time.every (5 * Time.second) UpdateStatus
 
 
 view : Model -> Html Msg
@@ -127,26 +181,73 @@ view model =
         , Html.Attributes.placeholder "Song Name"
         ]
         []
-    , Html.br [] []
-    , Html.button
-        [Html.Events.onClick PlaySong]
-        [Html.text "Play"]
-    , Html.br [] []
-    , Html.br [] []
+    , simpleBr
+
+    , playButton
+    , simpleBr
+
+    , togglePauseButton
+    , simpleBr
+
+    , volumeControl
+    , simpleBr
+
     , serverStatusView model.serverStatus
     ]
 
 
 serverStatusView : ServerStatus -> Html Msg
-serverStatusView serverStatus = -- TODO Make these align nicely.
+serverStatusView serverStatus =
   Html.div
     []
     [ Html.text ("Song: " ++ serverStatus.song)
-    , Html.br [] []
+    , simpleBr
 
     , Html.text ("Volume: " ++ serverStatus.volume)
-    , Html.br [] []
+    , simpleBr
 
     , Html.text ("State: " ++ serverStatus.state)
+    ]
+
+
+playButton : Html Msg
+playButton =
+  simpleHtmlButton PlaySong "Play"
+
+
+increaseVolumeButton : Html Msg
+increaseVolumeButton =
+  simpleHtmlButton IncraseVolume "+"
+
+
+decreaseVolumeButton : Html Msg
+decreaseVolumeButton =
+  simpleHtmlButton DecreaseVolume "-"
+
+
+togglePauseButton : Html Msg
+togglePauseButton =
+  simpleHtmlButton TogglePause "Toggle Pause"
+
+
+simpleHtmlButton : Msg -> String -> Html Msg
+simpleHtmlButton msg text =
+  Html.button
+    [Html.Events.onClick msg]
+    [Html.text text]
+
+
+simpleBr : Html Msg
+simpleBr =
+  Html.br [] []
+
+
+volumeControl : Html Msg
+volumeControl =
+  Html.div
+    []
+    [ Html.text "Volume Control: "
+    , increaseVolumeButton
+    , decreaseVolumeButton
     ]
 

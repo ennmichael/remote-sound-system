@@ -1,3 +1,22 @@
+var _user$project$Main$simpleBr = A2(
+	_elm_lang$html$Html$br,
+	{ctor: '[]'},
+	{ctor: '[]'});
+var _user$project$Main$simpleHtmlButton = F2(
+	function (msg, text) {
+		return A2(
+			_elm_lang$html$Html$button,
+			{
+				ctor: '::',
+				_0: _elm_lang$html$Html_Events$onClick(msg),
+				_1: {ctor: '[]'}
+			},
+			{
+				ctor: '::',
+				_0: _elm_lang$html$Html$text(text),
+				_1: {ctor: '[]'}
+			});
+	});
 var _user$project$Main$serverStatusView = function (serverStatus) {
 	return A2(
 		_elm_lang$html$Html$div,
@@ -8,20 +27,14 @@ var _user$project$Main$serverStatusView = function (serverStatus) {
 				A2(_elm_lang$core$Basics_ops['++'], 'Song: ', serverStatus.song)),
 			_1: {
 				ctor: '::',
-				_0: A2(
-					_elm_lang$html$Html$br,
-					{ctor: '[]'},
-					{ctor: '[]'}),
+				_0: _user$project$Main$simpleBr,
 				_1: {
 					ctor: '::',
 					_0: _elm_lang$html$Html$text(
 						A2(_elm_lang$core$Basics_ops['++'], 'Volume: ', serverStatus.volume)),
 					_1: {
 						ctor: '::',
-						_0: A2(
-							_elm_lang$html$Html$br,
-							{ctor: '[]'},
-							{ctor: '[]'}),
+						_0: _user$project$Main$simpleBr,
 						_1: {
 							ctor: '::',
 							_0: _elm_lang$html$Html$text(
@@ -33,11 +46,8 @@ var _user$project$Main$serverStatusView = function (serverStatus) {
 			}
 		});
 };
-var _user$project$Main$subscriptions = function (model) {
-	return _elm_lang$core$Platform_Sub$none;
-};
 var _user$project$Main$errorServerStatus = {volume: 'ERROR', song: 'ERROR', state: 'ERROR'};
-var _user$project$Main$emptyServerStatus = {volume: '-', song: '-', state: '-'};
+var _user$project$Main$emptyServerStatus = {volume: '0', song: '-', state: '-'};
 var _user$project$Main$emptyModel = {serverStatus: _user$project$Main$emptyServerStatus, songInput: ''};
 var _user$project$Main$init = {ctor: '_Tuple2', _0: _user$project$Main$emptyModel, _1: _elm_lang$core$Platform_Cmd$none};
 var _user$project$Main$serverUrl = 'http://localhost:8000';
@@ -51,29 +61,65 @@ var _user$project$Main$statusDecoder = A4(
 	A2(_elm_lang$core$Json_Decode$field, 'volume', _elm_lang$core$Json_Decode$string),
 	A2(_elm_lang$core$Json_Decode$field, 'song', _elm_lang$core$Json_Decode$string),
 	A2(_elm_lang$core$Json_Decode$field, 'state', _elm_lang$core$Json_Decode$string));
+var _user$project$Main$serverGetRequest = function (path) {
+	return A2(
+		_elm_lang$http$Http$get,
+		A2(_elm_lang$core$Basics_ops['++'], _user$project$Main$serverUrl, path),
+		_user$project$Main$statusDecoder);
+};
+var _user$project$Main$statusRequest = _user$project$Main$serverGetRequest('/status');
+var _user$project$Main$serverPostRequest = function (path) {
+	return A3(_elm_lang$http$Http$post, path, _elm_lang$http$Http$emptyBody, _user$project$Main$statusDecoder);
+};
 var _user$project$Main$playRequest = function (songTitle) {
-	var playPath = A2(
+	var path = A2(
 		_elm_lang$core$Basics_ops['++'],
 		_user$project$Main$serverUrl,
 		A2(
 			_elm_lang$core$Basics_ops['++'],
 			'/play/',
 			_elm_lang$http$Http$encodeUri(songTitle)));
-	return A3(_elm_lang$http$Http$post, playPath, _elm_lang$http$Http$emptyBody, _user$project$Main$statusDecoder);
+	return _user$project$Main$serverPostRequest(path);
 };
-var _user$project$Main$statusRequest = A2(
-	_elm_lang$http$Http$get,
-	A2(_elm_lang$core$Basics_ops['++'], _user$project$Main$serverUrl, '/status'),
-	_user$project$Main$statusDecoder);
+var _user$project$Main$increaseVolumeRequest = _user$project$Main$serverPostRequest('/increasevolume');
+var _user$project$Main$decreaseVolumeRequest = _user$project$Main$serverPostRequest('/decreasevolume');
+var _user$project$Main$togglePauseRequest = _user$project$Main$serverPostRequest('/togglepause');
 var _user$project$Main$Model = F2(
 	function (a, b) {
 		return {serverStatus: a, songInput: b};
 	});
+var _user$project$Main$TogglePause = {ctor: 'TogglePause'};
+var _user$project$Main$togglePauseButton = A2(_user$project$Main$simpleHtmlButton, _user$project$Main$TogglePause, 'Toggle Pause');
+var _user$project$Main$DecreaseVolume = {ctor: 'DecreaseVolume'};
+var _user$project$Main$decreaseVolumeButton = A2(_user$project$Main$simpleHtmlButton, _user$project$Main$DecreaseVolume, '-');
+var _user$project$Main$IncraseVolume = {ctor: 'IncraseVolume'};
+var _user$project$Main$increaseVolumeButton = A2(_user$project$Main$simpleHtmlButton, _user$project$Main$IncraseVolume, '+');
+var _user$project$Main$volumeControl = A2(
+	_elm_lang$html$Html$div,
+	{ctor: '[]'},
+	{
+		ctor: '::',
+		_0: _elm_lang$html$Html$text('Volume Control: '),
+		_1: {
+			ctor: '::',
+			_0: _user$project$Main$increaseVolumeButton,
+			_1: {
+				ctor: '::',
+				_0: _user$project$Main$decreaseVolumeButton,
+				_1: {ctor: '[]'}
+			}
+		}
+	});
+var _user$project$Main$PlaySong = {ctor: 'PlaySong'};
+var _user$project$Main$playButton = A2(_user$project$Main$simpleHtmlButton, _user$project$Main$PlaySong, 'Play');
 var _user$project$Main$ServerResponse = function (a) {
 	return {ctor: 'ServerResponse', _0: a};
 };
 var _user$project$Main$update = F2(
 	function (msg, model) {
+		var sendRequest = function (request) {
+			return A2(_elm_lang$http$Http$send, _user$project$Main$ServerResponse, request);
+		};
 		var _p0 = msg;
 		switch (_p0.ctor) {
 			case 'UpdateSongInput':
@@ -84,16 +130,7 @@ var _user$project$Main$update = F2(
 						{songInput: _p0._0}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			case 'PlaySong':
-				return {
-					ctor: '_Tuple2',
-					_0: model,
-					_1: A2(
-						_elm_lang$http$Http$send,
-						_user$project$Main$ServerResponse,
-						_user$project$Main$playRequest(model.songInput))
-				};
-			default:
+			case 'ServerResponse':
 				if (_p0._0.ctor === 'Err') {
 					return {
 						ctor: '_Tuple2',
@@ -111,9 +148,45 @@ var _user$project$Main$update = F2(
 						_1: _elm_lang$core$Platform_Cmd$none
 					};
 				}
+			case 'UpdateStatus':
+				return {
+					ctor: '_Tuple2',
+					_0: model,
+					_1: A2(_elm_lang$http$Http$send, _user$project$Main$ServerResponse, _user$project$Main$statusRequest)
+				};
+			case 'PlaySong':
+				return {
+					ctor: '_Tuple2',
+					_0: model,
+					_1: sendRequest(
+						_user$project$Main$playRequest(model.songInput))
+				};
+			case 'IncraseVolume':
+				return {
+					ctor: '_Tuple2',
+					_0: model,
+					_1: sendRequest(_user$project$Main$increaseVolumeRequest)
+				};
+			case 'DecreaseVolume':
+				return {
+					ctor: '_Tuple2',
+					_0: model,
+					_1: sendRequest(_user$project$Main$decreaseVolumeRequest)
+				};
+			default:
+				return {
+					ctor: '_Tuple2',
+					_0: model,
+					_1: sendRequest(_user$project$Main$togglePauseRequest)
+				};
 		}
 	});
-var _user$project$Main$PlaySong = {ctor: 'PlaySong'};
+var _user$project$Main$UpdateStatus = function (a) {
+	return {ctor: 'UpdateStatus', _0: a};
+};
+var _user$project$Main$subscriptions = function (model) {
+	return A2(_elm_lang$core$Time$every, 5 * _elm_lang$core$Time$second, _user$project$Main$UpdateStatus);
+};
 var _user$project$Main$UpdateSongInput = function (a) {
 	return {ctor: 'UpdateSongInput', _0: a};
 };
@@ -137,40 +210,32 @@ var _user$project$Main$view = function (model) {
 				{ctor: '[]'}),
 			_1: {
 				ctor: '::',
-				_0: A2(
-					_elm_lang$html$Html$br,
-					{ctor: '[]'},
-					{ctor: '[]'}),
+				_0: _user$project$Main$simpleBr,
 				_1: {
 					ctor: '::',
-					_0: A2(
-						_elm_lang$html$Html$button,
-						{
-							ctor: '::',
-							_0: _elm_lang$html$Html_Events$onClick(_user$project$Main$PlaySong),
-							_1: {ctor: '[]'}
-						},
-						{
-							ctor: '::',
-							_0: _elm_lang$html$Html$text('Play'),
-							_1: {ctor: '[]'}
-						}),
+					_0: _user$project$Main$playButton,
 					_1: {
 						ctor: '::',
-						_0: A2(
-							_elm_lang$html$Html$br,
-							{ctor: '[]'},
-							{ctor: '[]'}),
+						_0: _user$project$Main$simpleBr,
 						_1: {
 							ctor: '::',
-							_0: A2(
-								_elm_lang$html$Html$br,
-								{ctor: '[]'},
-								{ctor: '[]'}),
+							_0: _user$project$Main$togglePauseButton,
 							_1: {
 								ctor: '::',
-								_0: _user$project$Main$serverStatusView(model.serverStatus),
-								_1: {ctor: '[]'}
+								_0: _user$project$Main$simpleBr,
+								_1: {
+									ctor: '::',
+									_0: _user$project$Main$volumeControl,
+									_1: {
+										ctor: '::',
+										_0: _user$project$Main$simpleBr,
+										_1: {
+											ctor: '::',
+											_0: _user$project$Main$serverStatusView(model.serverStatus),
+											_1: {ctor: '[]'}
+										}
+									}
+								}
 							}
 						}
 					}
