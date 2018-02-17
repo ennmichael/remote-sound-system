@@ -42,7 +42,7 @@ playRequest : String -> Http.Request ServerStatus
 playRequest songTitle =
   let
     playPath =
-      serverUrl ++ "/play/" ++ songTitle
+      serverUrl ++ "/play/" ++ (Http.encodeUri songTitle)
   in
     Http.post playPath Http.emptyBody statusDecoder
 

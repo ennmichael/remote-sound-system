@@ -55,7 +55,10 @@ var _user$project$Main$playRequest = function (songTitle) {
 	var playPath = A2(
 		_elm_lang$core$Basics_ops['++'],
 		_user$project$Main$serverUrl,
-		A2(_elm_lang$core$Basics_ops['++'], '/play/', songTitle));
+		A2(
+			_elm_lang$core$Basics_ops['++'],
+			'/play/',
+			_elm_lang$http$Http$encodeUri(songTitle)));
 	return A3(_elm_lang$http$Http$post, playPath, _elm_lang$http$Http$emptyBody, _user$project$Main$statusDecoder);
 };
 var _user$project$Main$statusRequest = A2(

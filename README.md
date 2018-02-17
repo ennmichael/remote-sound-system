@@ -26,12 +26,12 @@ Requests made to any other path should return a 404. This is not implemented yet
 
 ```
 sudo apt install -y youtube-dl libvlc-dev vlc
-python3.6 -m pip install pafy
 python3.6 -m pip install vlc
-python3.6 -m pip install requests
+python3.6 -m pip install pafy
 python3.6 -m pip install pyquery
-python3.6 -m pip install gunicorn
 ```
+
+Also, we use headless chrome, so you need chromium v59 at least.
 
 # Running the server
 

@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 
 
+import http
 import http.server
 import shutil
+import urllib.parse
 import io
 
-from player import Player, releasing
+
+from player import YoutubePlayer, releasing
 
 
 STATUS_PATH = '/status'
@@ -21,7 +24,7 @@ class InvalidRequest(BaseException):
     pass
 
 
-with releasing(Player()) as player:
+with releasing(YoutubePlayer()) as player:
     class RequestHandler(http.server.SimpleHTTPRequestHandler):
 
         def do_GET(self) -> None:
@@ -31,9 +34,7 @@ with releasing(Player()) as player:
                 super().do_GET()
 
         def do_POST(self) -> None:
-            print(f'Post at path {self.path}')
-
-            def interpret_request():
+            def interpret_request() -> None:
                 if self.path == TOGGLE_PAUSE_PATH:
                     player.toggle_pause()
                 elif self.path == INCREASE_VOLUME_PATH:
@@ -47,12 +48,16 @@ with releasing(Player()) as player:
 
             try:
                 interpret_request()
-                self.send_response(http.server.HTTPStatus.OK)
+                self.send_response(http.HTTPStatus.OK)
                 self.end_headers()
             except InvalidRequest:
-                self.send_error(http.server.HTTPStatus.BAD_REQUEST) 
+                self.send_error(http.HTTPStatus.BAD_REQUEST)
 
         def handle_play_request(self) -> None:
+            def parse_song(path: str) -> str:
+                quoted_song = self.path[len(PLAY_PATH_PREFIX):]
+                return urllib.parse.unquote(quoted_song)
+
             song = self.path[len(PLAY_PATH_PREFIX):]
             player.play(song)
             self.serve_status()

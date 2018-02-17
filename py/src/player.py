@@ -1,16 +1,44 @@
 #!/usr/bin/env python3
 
 
+# TODO Rename this file to youtube_player.py
+
+
 from typing import Iterator, NamedTuple, TypeVar, Generic, Dict
 import contextlib
 import collections
 import pathlib
 import json
+import subprocess
+import urllib.parse
 
 import vlc
 import pafy
-import requests
 from pyquery import PyQuery
+
+
+class ChromeError(BaseException):
+
+    pass
+
+
+def load_webpage(url: str) -> str:
+    args = [
+        'google-chrome',
+        '--headless',
+        '--dump-dom',
+        url
+    ]
+
+    process = subprocess.run(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+
+    if process.returncode != 0:
+        raise ChromeError(process.stderr)
+    else:
+        return process.stdout or ''
 
 
 class SongNotCached(BaseException):
@@ -50,42 +78,34 @@ def online_song_media(url: str) -> vlc.Media:
     return vlc.Media(url)
 
 
-class YoutubeSearchHit(NamedTuple):
+class YoutubeVideo(NamedTuple):
 
     title: str
     url: str
 
 
-def find_on_youtube(search_query: str) -> YoutubeSearchHit:
+def find_on_youtube(search_query: str) -> YoutubeVideo:
     def get_html(search_query: str) -> str:
-        spoofed_headers = {
-            'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:57.0) Gecko/20100101 Firefox/57.0'
-        }
+        search_query = urllib.parse.quote(search_query)
+        url = f'https://www.youtube.com/results?search_query={search_query}'
+        return load_webpage(url)
 
-        payload = {
-            'search_query': search_query
-        }
-        
-        response = requests.get(
-            'https://www.youtube.com/results',
-            headers=spoofed_headers,
-            params=payload)
-        return response.text
-
-    def parse_html(html: str) -> YoutubeSearchHit:
+    def parse_html(html: str) -> YoutubeVideo:
         query = PyQuery(html)
-        match = query('a.yt-uix-tile-link')
-        href = match.attrib("href")
+        match = query('a#video-title').eq(0)
+        href = match.attr("href")
+        url = f'https://www.youtube.com/{href}'# TODO This ought to be a separate function
+        video = pafy.new(url)
 
-        return YoutubeSearchHit(
-            title=match.text(),
-            url=f'http://www.youtube.com{href}')
+        return YoutubeVideo(
+            title=video.title,
+            url=video.getbestaudio().url)
 
     html = get_html(search_query)
     return parse_html(html)
 
 
-class Player:
+class YoutubePlayer:
 
     DEFAULT_VOLUME_DELTA = 10
 
@@ -94,7 +114,14 @@ class Player:
         self.song = ''
 
     def play(self, song: str) -> None:
-        media = song_media(song)
+        title, media = song_media(song)
+
+        import pdb; pdb.set_trace()
+
+        self.song = title
+        self.play_vlc_media(media)
+
+    def play_vlc_media(self, media: vlc.Media) -> None:
         self.vlc_player.set_media(media)
         self.vlc_player.play()
 
@@ -152,7 +179,7 @@ class Player:
         return json.dumps(self.status())
 
 
-Releasable = TypeVar('Releasable', Player, vlc.MediaPlayer, vlc.Media)
+Releasable = TypeVar('Releasable', YoutubePlayer, vlc.MediaPlayer, vlc.Media)
 
 
 @contextlib.contextmanager
