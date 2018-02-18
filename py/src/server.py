@@ -30,23 +30,28 @@ with releasing(YoutubePlayer()) as player:
 
         def do_GET(self) -> None:
             if self.path == STATUS_PATH:
+                self.end_response_ok()
                 self.serve_status()
             else:
                 super().do_GET()
 
         def do_POST(self) -> None:
+            self.end_response_ok()
+
             def interpret_request() -> None:
                 if self.path == TOGGLE_PAUSE_PATH:
                     player.toggle_pause()
+                    self.serve_status()
                 elif self.path == INCREASE_VOLUME_PATH:
                     player.increase_volume()
+                    self.serve_status()
                 elif self.path == DECREASE_VOLUME_PATH:
                     player.decrease_volume()
+                    self.serve_status()
                 elif self.path.startswith(PLAY_PATH_PREFIX):
+                    self.serve_status()
                     self.handle_play_request()
 
-            self.end_response_ok()
-            self.serve_status()
             interpret_request()
 
         def end_response(self, status: http.HTTPStatus) -> None:

@@ -8,7 +8,7 @@ import Time exposing (Time)
 
 
 serverUrl =
-  "http://localhost:8000"
+  "http://192.168.0.17:8000"
 
 
 type alias ServerStatus =
@@ -28,10 +28,12 @@ type Msg
   | TogglePause
 
 
-type alias Model = 
-  { serverStatus : ServerStatus
-  , songInput : String
-  }
+type alias Model =
+  Result
+    Http.Error
+    { serverStatus : ServerStatus
+    , songInput : String
+    }
  
 
 statusDecoder : Json.Decode.Decoder ServerStatus
@@ -98,25 +100,23 @@ init =
 
 emptyModel : Model
 emptyModel =
-  { serverStatus = emptyServerStatus
-  , songInput = ""
-  }
+  Ok
+    { serverStatus = emptyServerStatus
+    , songInput = ""
+    }
 
 
 emptyServerStatus : ServerStatus
 emptyServerStatus =
-  { volume = "0"
+  { volume = "100"
   , song = "-"
   , state = "-"
   }
 
 
-errorServerStatus : ServerStatus
-errorServerStatus =
-  { volume = "ERROR"
-  , song = "ERROR"
-  , state = "ERROR"
-  }
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  Time.every Time.second UpdateStatus
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -124,76 +124,86 @@ update msg model =
   let
     sendRequest request =
       Http.send ServerResponse request
+
+    updateOkModel model =
+      case msg of
+        UpdateSongInput newInput ->
+          ( Ok {model | songInput = newInput}
+          , Cmd.none
+          )
+
+        ServerResponse (Err err) ->
+          ( Err err
+          , Cmd.none
+          )
+
+        ServerResponse (Ok status) ->
+          ( Ok {model | serverStatus = status}
+          , Cmd.none
+          )
+
+        UpdateStatus _ ->
+          ( Ok model
+          , Http.send ServerResponse statusRequest
+          )
+
+        PlaySong ->
+          ( Ok model
+          , sendRequest (playRequest model.songInput)
+          )
+
+        IncraseVolume ->
+          ( Ok model
+          , sendRequest increaseVolumeRequest
+          )
+
+        DecreaseVolume ->
+          ( Ok model
+          , sendRequest decreaseVolumeRequest
+          )
+
+        TogglePause ->
+          ( Ok model
+          , sendRequest togglePauseRequest
+          )
   in
-    case msg of
-      UpdateSongInput newInput ->
-        ( {model | songInput = newInput}
+    case model of
+      Err _ ->
+        ( model
         , Cmd.none
         )
 
-      ServerResponse (Err err) ->
-        ( {model | serverStatus = errorServerStatus}
-        , Cmd.none
-        )
-
-      ServerResponse (Ok status) ->
-        ( {model | serverStatus = status}
-        , Cmd.none
-        )
-
-      UpdateStatus _ ->
-        ( model
-        , Http.send ServerResponse statusRequest
-        )
-
-      PlaySong ->
-        ( model
-        , sendRequest (playRequest model.songInput)
-        )
-
-      IncraseVolume ->
-        ( model
-        , sendRequest increaseVolumeRequest
-        )
-
-      DecreaseVolume ->
-        ( model
-        , sendRequest decreaseVolumeRequest
-        )
-
-      TogglePause ->
-        ( model
-        , sendRequest togglePauseRequest
-        )
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-  Time.every (5 * Time.second) UpdateStatus
+      Ok model ->
+        updateOkModel model
 
 
 view : Model -> Html Msg
 view model =
-  Html.div
-    []
-    [ Html.input
-        [ Html.Events.onInput UpdateSongInput
-        , Html.Attributes.placeholder "Song Name"
-        ]
+  case model of
+    Ok model ->
+      Html.div
         []
-    , simpleBr
+        [ Html.input
+            [ Html.Events.onInput UpdateSongInput
+            , Html.Attributes.placeholder "Song Name"
+            ]
+            []
+        , simpleBr
 
-    , playButton
-    , simpleBr
+        , playButton
+        , simpleBr
 
-    , togglePauseButton
-    , simpleBr
+        , togglePauseButton
+        , simpleBr
 
-    , volumeControl
-    , simpleBr
+        , volumeControl
+        , simpleBr
 
-    , serverStatusView model.serverStatus
-    ]
+        , serverStatusView model.serverStatus
+        ]
+
+    Err err ->
+      errorDiv err
 
 
 serverStatusView : ServerStatus -> Html Msg
@@ -250,4 +260,29 @@ volumeControl =
     , increaseVolumeButton
     , decreaseVolumeButton
     ]
+
+
+errorDiv : Http.Error -> Html Msg
+errorDiv err =
+  let
+    errorMessage =
+      case err of
+        Http.BadUrl url ->
+          "Bad url: " ++ url
+
+        Http.Timeout ->
+          "Timed out"
+
+        Http.NetworkError ->
+          "Network error"
+
+        Http.BadStatus _ ->
+          "Bad status code"
+      
+        Http.BadPayload _ _ ->
+          "Developer error"
+  in
+    Html.div
+      [Html.Attributes.style [("color", "red")]]
+      [Html.text ("ERROR: " ++ errorMessage ++ ".")]
 
