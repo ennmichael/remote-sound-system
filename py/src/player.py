@@ -157,17 +157,17 @@ class YoutubePlayer:
     def status(self) -> Dict[str, str]:
         def state_str() -> str:
             if self.is_playing():
-                return 'Playing'
+                return 'playing'
             elif self.is_paused():
-                return 'Paused'
+                return 'paused'
             else:
-                return '-'
+                return 'unknown'
 
         def song_str() -> str:
             if self.is_playing() or self.is_paused():
                 return self.song
             else:
-                return '-'
+                return ''
 
         return {
             'volume': str(self.volume()),

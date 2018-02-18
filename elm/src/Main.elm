@@ -148,7 +148,7 @@ update msg model =
           )
 
         PlaySong ->
-          ( Ok model
+          ( Ok {model | songInput = ""}
           , sendRequest (playRequest model.songInput)
           )
 
@@ -180,7 +180,7 @@ update msg model =
 view : Model -> Html Msg
 view model =
   case model of
-    Ok model ->
+    Ok {serverStatus} ->
       Html.div
         []
         [ Html.input
@@ -193,36 +193,36 @@ view model =
         , playButton
         , simpleBr
 
-        , togglePauseButton
+        , togglePauseButton serverStatus.state
         , simpleBr
 
-        , volumeControl
-        , simpleBr
+        , volumeControl serverStatus.volume
 
-        , serverStatusView model.serverStatus
+        , songDiv serverStatus.song
         ]
 
     Err err ->
       errorDiv err
 
 
-serverStatusView : ServerStatus -> Html Msg
-serverStatusView serverStatus =
-  Html.div
-    []
-    [ Html.text ("Song: " ++ serverStatus.song)
-    , simpleBr
+songDiv : String -> Html Msg
+songDiv song =
+  let
+    songText =
+      if song == "" then
+        "-"
 
-    , Html.text ("Volume: " ++ serverStatus.volume)
-    , simpleBr
-
-    , Html.text ("State: " ++ serverStatus.state)
-    ]
+      else
+        song
+  in
+    Html.div
+      []
+      [Html.text ("Song: " ++ songText)]
 
 
 playButton : Html Msg
 playButton =
-  simpleHtmlButton PlaySong "Play"
+  simpleHtmlButton PlaySong "Play New"
 
 
 increaseVolumeButton : Html Msg
@@ -235,9 +235,24 @@ decreaseVolumeButton =
   simpleHtmlButton DecreaseVolume "-"
 
 
-togglePauseButton : Html Msg
-togglePauseButton =
-  simpleHtmlButton TogglePause "Toggle Pause"
+togglePauseButton : String -> Html Msg
+togglePauseButton state =
+  if state == "unknown" then
+    Html.div [] []
+  else
+    let
+      text =
+        case state of
+          "playing" ->
+            "Pause"
+
+          "paused" ->
+            "Continue"
+
+          _ ->
+            "?"
+    in
+      simpleHtmlButton TogglePause text
 
 
 simpleHtmlButton : Msg -> String -> Html Msg
@@ -252,11 +267,11 @@ simpleBr =
   Html.br [] []
 
 
-volumeControl : Html Msg
-volumeControl =
+volumeControl : String -> Html Msg
+volumeControl currentVolume =
   Html.div
     []
-    [ Html.text "Volume Control: "
+    [ Html.text ("Volume: " ++ currentVolume)
     , increaseVolumeButton
     , decreaseVolumeButton
     ]

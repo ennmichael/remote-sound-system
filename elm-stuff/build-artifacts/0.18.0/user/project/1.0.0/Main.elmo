@@ -55,33 +55,16 @@ var _user$project$Main$simpleHtmlButton = F2(
 				_1: {ctor: '[]'}
 			});
 	});
-var _user$project$Main$serverStatusView = function (serverStatus) {
+var _user$project$Main$songDiv = function (song) {
+	var songText = _elm_lang$core$Native_Utils.eq(song, '') ? '-' : song;
 	return A2(
 		_elm_lang$html$Html$div,
 		{ctor: '[]'},
 		{
 			ctor: '::',
 			_0: _elm_lang$html$Html$text(
-				A2(_elm_lang$core$Basics_ops['++'], 'Song: ', serverStatus.song)),
-			_1: {
-				ctor: '::',
-				_0: _user$project$Main$simpleBr,
-				_1: {
-					ctor: '::',
-					_0: _elm_lang$html$Html$text(
-						A2(_elm_lang$core$Basics_ops['++'], 'Volume: ', serverStatus.volume)),
-					_1: {
-						ctor: '::',
-						_0: _user$project$Main$simpleBr,
-						_1: {
-							ctor: '::',
-							_0: _elm_lang$html$Html$text(
-								A2(_elm_lang$core$Basics_ops['++'], 'State: ', serverStatus.state)),
-							_1: {ctor: '[]'}
-						}
-					}
-				}
-			}
+				A2(_elm_lang$core$Basics_ops['++'], 'Song: ', songText)),
+			_1: {ctor: '[]'}
 		});
 };
 var _user$project$Main$emptyServerStatus = {volume: '100', song: '-', state: '-'};
@@ -123,29 +106,52 @@ var _user$project$Main$increaseVolumeRequest = _user$project$Main$serverPostRequ
 var _user$project$Main$decreaseVolumeRequest = _user$project$Main$serverPostRequest('/decreasevolume');
 var _user$project$Main$togglePauseRequest = _user$project$Main$serverPostRequest('/togglepause');
 var _user$project$Main$TogglePause = {ctor: 'TogglePause'};
-var _user$project$Main$togglePauseButton = A2(_user$project$Main$simpleHtmlButton, _user$project$Main$TogglePause, 'Toggle Pause');
+var _user$project$Main$togglePauseButton = function (state) {
+	if (_elm_lang$core$Native_Utils.eq(state, 'unknown')) {
+		return A2(
+			_elm_lang$html$Html$div,
+			{ctor: '[]'},
+			{ctor: '[]'});
+	} else {
+		var text = function () {
+			var _p1 = state;
+			switch (_p1) {
+				case 'playing':
+					return 'Pause';
+				case 'paused':
+					return 'Continue';
+				default:
+					return '?';
+			}
+		}();
+		return A2(_user$project$Main$simpleHtmlButton, _user$project$Main$TogglePause, text);
+	}
+};
 var _user$project$Main$DecreaseVolume = {ctor: 'DecreaseVolume'};
 var _user$project$Main$decreaseVolumeButton = A2(_user$project$Main$simpleHtmlButton, _user$project$Main$DecreaseVolume, '-');
 var _user$project$Main$IncraseVolume = {ctor: 'IncraseVolume'};
 var _user$project$Main$increaseVolumeButton = A2(_user$project$Main$simpleHtmlButton, _user$project$Main$IncraseVolume, '+');
-var _user$project$Main$volumeControl = A2(
-	_elm_lang$html$Html$div,
-	{ctor: '[]'},
-	{
-		ctor: '::',
-		_0: _elm_lang$html$Html$text('Volume Control: '),
-		_1: {
+var _user$project$Main$volumeControl = function (currentVolume) {
+	return A2(
+		_elm_lang$html$Html$div,
+		{ctor: '[]'},
+		{
 			ctor: '::',
-			_0: _user$project$Main$increaseVolumeButton,
+			_0: _elm_lang$html$Html$text(
+				A2(_elm_lang$core$Basics_ops['++'], 'Volume: ', currentVolume)),
 			_1: {
 				ctor: '::',
-				_0: _user$project$Main$decreaseVolumeButton,
-				_1: {ctor: '[]'}
+				_0: _user$project$Main$increaseVolumeButton,
+				_1: {
+					ctor: '::',
+					_0: _user$project$Main$decreaseVolumeButton,
+					_1: {ctor: '[]'}
+				}
 			}
-		}
-	});
+		});
+};
 var _user$project$Main$PlaySong = {ctor: 'PlaySong'};
-var _user$project$Main$playButton = A2(_user$project$Main$simpleHtmlButton, _user$project$Main$PlaySong, 'Play');
+var _user$project$Main$playButton = A2(_user$project$Main$simpleHtmlButton, _user$project$Main$PlaySong, 'Play New');
 var _user$project$Main$ServerResponse = function (a) {
 	return {ctor: 'ServerResponse', _0: a};
 };
@@ -155,22 +161,22 @@ var _user$project$Main$update = F2(
 			return A2(_elm_lang$http$Http$send, _user$project$Main$ServerResponse, request);
 		};
 		var updateOkModel = function (model) {
-			var _p1 = msg;
-			switch (_p1.ctor) {
+			var _p2 = msg;
+			switch (_p2.ctor) {
 				case 'UpdateSongInput':
 					return {
 						ctor: '_Tuple2',
 						_0: _elm_lang$core$Result$Ok(
 							_elm_lang$core$Native_Utils.update(
 								model,
-								{songInput: _p1._0})),
+								{songInput: _p2._0})),
 						_1: _elm_lang$core$Platform_Cmd$none
 					};
 				case 'ServerResponse':
-					if (_p1._0.ctor === 'Err') {
+					if (_p2._0.ctor === 'Err') {
 						return {
 							ctor: '_Tuple2',
-							_0: _elm_lang$core$Result$Err(_p1._0._0),
+							_0: _elm_lang$core$Result$Err(_p2._0._0),
 							_1: _elm_lang$core$Platform_Cmd$none
 						};
 					} else {
@@ -179,7 +185,7 @@ var _user$project$Main$update = F2(
 							_0: _elm_lang$core$Result$Ok(
 								_elm_lang$core$Native_Utils.update(
 									model,
-									{serverStatus: _p1._0._0})),
+									{serverStatus: _p2._0._0})),
 							_1: _elm_lang$core$Platform_Cmd$none
 						};
 					}
@@ -192,7 +198,10 @@ var _user$project$Main$update = F2(
 				case 'PlaySong':
 					return {
 						ctor: '_Tuple2',
-						_0: _elm_lang$core$Result$Ok(model),
+						_0: _elm_lang$core$Result$Ok(
+							_elm_lang$core$Native_Utils.update(
+								model,
+								{songInput: ''})),
 						_1: sendRequest(
 							_user$project$Main$playRequest(model.songInput))
 					};
@@ -216,11 +225,11 @@ var _user$project$Main$update = F2(
 					};
 			}
 		};
-		var _p2 = model;
-		if (_p2.ctor === 'Err') {
+		var _p3 = model;
+		if (_p3.ctor === 'Err') {
 			return {ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none};
 		} else {
-			return updateOkModel(_p2._0);
+			return updateOkModel(_p3._0);
 		}
 	});
 var _user$project$Main$UpdateStatus = function (a) {
@@ -233,8 +242,9 @@ var _user$project$Main$UpdateSongInput = function (a) {
 	return {ctor: 'UpdateSongInput', _0: a};
 };
 var _user$project$Main$view = function (model) {
-	var _p3 = model;
-	if (_p3.ctor === 'Ok') {
+	var _p4 = model;
+	if (_p4.ctor === 'Ok') {
+		var _p5 = _p4._0.serverStatus;
 		return A2(
 			_elm_lang$html$Html$div,
 			{ctor: '[]'},
@@ -263,21 +273,17 @@ var _user$project$Main$view = function (model) {
 							_0: _user$project$Main$simpleBr,
 							_1: {
 								ctor: '::',
-								_0: _user$project$Main$togglePauseButton,
+								_0: _user$project$Main$togglePauseButton(_p5.state),
 								_1: {
 									ctor: '::',
 									_0: _user$project$Main$simpleBr,
 									_1: {
 										ctor: '::',
-										_0: _user$project$Main$volumeControl,
+										_0: _user$project$Main$volumeControl(_p5.volume),
 										_1: {
 											ctor: '::',
-											_0: _user$project$Main$simpleBr,
-											_1: {
-												ctor: '::',
-												_0: _user$project$Main$serverStatusView(_p3._0.serverStatus),
-												_1: {ctor: '[]'}
-											}
+											_0: _user$project$Main$songDiv(_p5.song),
+											_1: {ctor: '[]'}
 										}
 									}
 								}
@@ -287,7 +293,7 @@ var _user$project$Main$view = function (model) {
 				}
 			});
 	} else {
-		return _user$project$Main$errorDiv(_p3._0);
+		return _user$project$Main$errorDiv(_p4._0);
 	}
 };
 var _user$project$Main$main = _elm_lang$html$Html$program(
