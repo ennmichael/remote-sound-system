@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 
 
-# TODO Rename this file to youtube_player.py
-
-
-from typing import Iterator, NamedTuple, TypeVar, Generic, Dict
-import contextlib
-import collections
+from typing import NamedTuple, Dict, Optional
 import pathlib
 import json
 import subprocess
 import urllib.parse
+import io
 
 import vlc
 import pafy
@@ -41,6 +37,24 @@ def load_webpage(url: str) -> str:
         return process.stdout or ''
 
 
+def download_url(url: str, output_path: str) -> None:
+    touch(output_path)
+
+    args = [
+         'wget',
+        '-b',
+        '-O', output_path,
+        '-t', '1',
+        url
+    ]
+
+    subprocess.run(args, stdout=subprocess.PIPE)
+
+
+def touch(path: str) -> None:
+    io.open(path, 'a').close()
+
+
 class SongNotCached(BaseException):
 
     pass
@@ -52,30 +66,8 @@ class SongMedia(NamedTuple):
     vlc_media: vlc.Media
 
 
-def song_media(song: str) -> SongMedia:
-    title, url = find_on_youtube(song)
-
-    try:
-        return SongMedia(title, cached_song_media(title))
-    except SongNotCached:
-        return SongMedia(title, online_song_media(url))
-
-
-def cached_song_media(title: str) -> vlc.Media:
-    path = f'db/{title}'
-
-    if not file_exists(path):
-        raise SongNotCached
-    
-    return vlc.Media(f'db/{title}')
-
-
 def file_exists(path: str) -> bool:
     return pathlib.Path(path).is_file()
-
-
-def online_song_media(url: str) -> vlc.Media:
-    return vlc.Media(url)
 
 
 class YoutubeVideo(NamedTuple):
@@ -111,15 +103,43 @@ class YoutubePlayer:
 
     DEFAULT_VOLUME_DELTA = 10
 
-    def __init__(self) -> None:
+    def __init__(self, database_path: str) -> None:
+        self.database_path = database_path
         self.vlc_player = vlc.MediaPlayer()
         self.song = ''
         self.set_volume(100)
 
     def play(self, song: str) -> None:
-        title, media = song_media(song)
+        title, media = self.song_media(song)
         self.song = title
         self.play_vlc_media(media)
+
+    def song_media(self, song: str) -> vlc.Media:
+        def cached_song_media(path: str) -> Optional[vlc.Media]:
+            if not file_exists(path):
+                return None
+            return vlc.Media(path)
+
+        def online_song_media(url: str) -> vlc.Media:
+            return vlc.Media(url)
+
+        # !!!
+        # TODO This function is incomplete, and the caching functionality doesn't work
+        # !!!
+
+        title, url = find_on_youtube(song)
+        online_media = online_song_media(url)
+        return SongMedia(title, online_media) # TODO This is a premature return statement
+
+        cached_song_path = f'{self.database_path}/{title}'
+        cached_media = cached_song_media(cached_song_path)
+
+        if cached_media: 
+            return SongMedia(title, cached_media)
+        else:
+            online_media = online_song_media(url)
+            download_url(url, cached_song_path)
+            return SongMedia(title, online_media)
 
     def play_vlc_media(self, media: vlc.Media) -> None:
         self.vlc_player.set_media(media)
@@ -151,7 +171,7 @@ class YoutubePlayer:
     def volume(self) -> int:
         return int(self.vlc_player.audio_get_volume())
 
-    def release(self) -> None:
+    def close(self) -> None:
         self.vlc_player.release()
 
     def status(self) -> Dict[str, str]:
@@ -178,14 +198,4 @@ class YoutubePlayer:
     def status_json(self) -> str:
         return json.dumps(self.status())
 
-
-Releasable = TypeVar('Releasable', YoutubePlayer, vlc.MediaPlayer, vlc.Media)
-
-
-@contextlib.contextmanager
-def releasing(releasable: Releasable) -> Iterator[Releasable]:
-    try:
-        yield releasable
-    finally:
-        releasable.release()
 

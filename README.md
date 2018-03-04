@@ -25,7 +25,7 @@ Requests made to any other path should return a 404. This is not implemented yet
 # Dependencies
 
 ```
-sudo apt install -y youtube-dl libvlc-dev vlc
+sudo apt-get install -y youtube-dl libvlc-dev vlc wget
 python3.6 -m pip install vlc
 python3.6 -m pip install pafy
 python3.6 -m pip install pyquery

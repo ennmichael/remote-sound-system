@@ -8,7 +8,7 @@ import Time exposing (Time)
 
 
 serverUrl =
-  "http://192.168.44.213:8000"
+  "http://localhost:8000"
 
 type alias ServerStatus =
   { volume : String
@@ -147,7 +147,7 @@ update msg model =
           )
 
         PlaySong ->
-          ( Ok {model | songInput = ""}
+          ( Ok model
           , sendRequest (playRequest model.songInput)
           )
 

@@ -6,10 +6,13 @@ import http.server
 import shutil
 import urllib.parse
 import io
-import json # TODO Remove this
+import contextlib
 
 
-from player import YoutubePlayer, releasing
+from youtube_player import YoutubePlayer
+
+
+SONG_DATABASE_PATH = './db'
 
 
 STATUS_PATH = '/status'
@@ -25,7 +28,7 @@ class InvalidRequest(BaseException):
     pass
 
 
-with releasing(YoutubePlayer()) as player:
+with contextlib.closing(YoutubePlayer(SONG_DATABASE_PATH)) as player:
     class RequestHandler(http.server.SimpleHTTPRequestHandler):
 
         def do_GET(self) -> None:
