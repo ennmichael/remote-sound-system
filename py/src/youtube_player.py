@@ -20,7 +20,7 @@ class ChromeError(BaseException):
 
 def load_webpage(url: str) -> str:
     args = [
-        'google-chrome',
+        'chromium-browser',
         '--headless',
         '--dump-dom',
         url
@@ -41,7 +41,7 @@ def download_url(url: str, output_path: str) -> None:
     touch(output_path)
 
     args = [
-         'wget',
+        'wget',
         '-b',
         '-O', output_path,
         '-t', '1',
