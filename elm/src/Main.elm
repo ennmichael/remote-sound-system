@@ -8,7 +8,7 @@ import Time exposing (Time)
 
 
 serverUrl =
-  "http://192.168.45.100:8000"
+  "http://192.168.45.50:8000"
 
 type alias ServerStatus =
   { volume : String
