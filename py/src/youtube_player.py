@@ -10,12 +10,17 @@ import io
 
 import vlc
 import pafy
+import io
 from pyquery import PyQuery
 
 
 class ChromeError(BaseException):
 
     pass
+
+
+def touch(path: str) -> None:
+    io.open(path, 'a').close()
 
 
 def load_webpage(url: str) -> str:
@@ -49,10 +54,6 @@ def download_url(url: str, output_path: str) -> None:
     ]
 
     subprocess.run(args, stdout=subprocess.PIPE)
-
-
-def touch(path: str) -> None:
-    io.open(path, 'a').close()
 
 
 class SongNotCached(BaseException):
@@ -123,23 +124,18 @@ class YoutubePlayer:
         def online_song_media(url: str) -> vlc.Media:
             return vlc.Media(url)
 
-        # !!!
-        # TODO This function is incomplete, and the caching functionality doesn't work
-        # !!!
+        # FIXME This function is a bit too long
+
+        cached_song_path = f'{self.database_path}/{song}'
+        cached_media = cached_song_media(cached_song_path)
+
+        if (cached_media):
+            return SongMedia(song, cached_media)
 
         title, url = find_on_youtube(song)
         online_media = online_song_media(url)
-        return SongMedia(title, online_media) # TODO This is a premature return statement
-
-        cached_song_path = f'{self.database_path}/{title}'
-        cached_media = cached_song_media(cached_song_path)
-
-        if cached_media: 
-            return SongMedia(title, cached_media)
-        else:
-            online_media = online_song_media(url)
-            download_url(url, cached_song_path)
-            return SongMedia(title, online_media)
+        download_url(url, cached_song_path)
+        return SongMedia(title, online_media)
 
     def play_vlc_media(self, media: vlc.Media) -> None:
         self.vlc_player.set_media(media)
