@@ -108,6 +108,7 @@ class YoutubePlayer:
         self.set_volume(100)
 
     def play(self, song: str) -> None:
+        song = song.lower()
         title, media = self.song_media(song)
         self.song = title
         self.play_vlc_media(media)
