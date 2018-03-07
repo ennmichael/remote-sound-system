@@ -1,3 +1,5 @@
+### NOTE: upon downloading, run ./setup.sh once from the .../remote-sound-system directory!
+
 # Remote sound system
 
 Communication between the server and the client is done using JSON.
