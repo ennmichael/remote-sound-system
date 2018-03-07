@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 
-from typing import NamedTuple, Dict, Optional
+from typing import NamedTuple, Dict, Optional, List
 import pathlib
 import json
 import subprocess
@@ -14,9 +14,21 @@ import io
 from pyquery import PyQuery
 
 
-class ChromeError(BaseException):
+class SubprocessError(BaseException):
 
     pass
+
+
+def run_safely(*subprocess_args: str) -> str:
+    process = subprocess.run(
+        subprocess_args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+
+    if process.returncode != 0:
+        raise SubprocessError(process.stderr)
+    else:
+        return process.stdout or ''
 
 
 def touch(path: str) -> None:
@@ -24,36 +36,21 @@ def touch(path: str) -> None:
 
 
 def load_webpage(url: str) -> str:
-    args = [
+    return run_safely(
         'chromium-browser',
         '--headless',
         '--dump-dom',
-        url
-    ]
-
-    process = subprocess.run(
-        args,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
-
-    if process.returncode != 0:
-        raise ChromeError(process.stderr)
-    else:
-        return process.stdout or ''
+        url)
 
 
 def download_url(url: str, output_path: str) -> None:
     touch(output_path)
-
-    args = [
+    run_safely(
         'wget',
         '-b',
         '-O', output_path,
         '-t', '1',
-        url
-    ]
-
-    subprocess.run(args, stdout=subprocess.PIPE)
+        url)
 
 
 class SongNotCached(BaseException):
