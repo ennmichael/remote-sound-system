@@ -9,8 +9,17 @@ import io
 import contextlib
 
 
-from youtube_player import YoutubePlayer
+from youtube_player import YoutubePlayer, SongQueue
 
+
+p = YoutubePlayer('./db')
+s = SongQueue(p)
+
+s.add_song('taste the rainbow motherfucker')
+s.add_song('heavydirtysoul')
+
+while True:
+    pass
 
 SONG_DATABASE_PATH = './db'
 
@@ -27,57 +36,57 @@ class InvalidRequest(BaseException):
 
     pass
 
+if __name__ == '__main__':
+    with contextlib.closing(YoutubePlayer(SONG_DATABASE_PATH)) as player:
+        class RequestHandler(http.server.SimpleHTTPRequestHandler):
 
-with contextlib.closing(YoutubePlayer(SONG_DATABASE_PATH)) as player:
-    class RequestHandler(http.server.SimpleHTTPRequestHandler):
+            def do_GET(self) -> None:
+                if self.path == STATUS_PATH:
+                    self.end_response_ok()
+                    self.serve_status()
+                else:
+                    super().do_GET()
 
-        def do_GET(self) -> None:
-            if self.path == STATUS_PATH:
+            def do_POST(self) -> None:
                 self.end_response_ok()
-                self.serve_status()
-            else:
-                super().do_GET()
 
-        def do_POST(self) -> None:
-            self.end_response_ok()
+                def interpret_request() -> None:
+                    if self.path == TOGGLE_PAUSE_PATH:
+                        player.toggle_pause()
+                        self.serve_status()
+                    elif self.path == INCREASE_VOLUME_PATH:
+                        player.increase_volume()
+                        self.serve_status()
+                    elif self.path == DECREASE_VOLUME_PATH:
+                        player.decrease_volume()
+                        self.serve_status()
+                    elif self.path.startswith(PLAY_PATH_PREFIX):
+                        self.serve_status()
+                        self.handle_play_request()
 
-            def interpret_request() -> None:
-                if self.path == TOGGLE_PAUSE_PATH:
-                    player.toggle_pause()
-                    self.serve_status()
-                elif self.path == INCREASE_VOLUME_PATH:
-                    player.increase_volume()
-                    self.serve_status()
-                elif self.path == DECREASE_VOLUME_PATH:
-                    player.decrease_volume()
-                    self.serve_status()
-                elif self.path.startswith(PLAY_PATH_PREFIX):
-                    self.serve_status()
-                    self.handle_play_request()
+                interpret_request()
 
-            interpret_request()
+            def end_response(self, status: http.HTTPStatus) -> None:
+                self.send_response(status)
+                self.end_headers()
 
-        def end_response(self, status: http.HTTPStatus) -> None:
-            self.send_response(status)
-            self.end_headers()
+            def end_response_ok(self) -> None:
+                self.end_response(http.HTTPStatus.OK)
 
-        def end_response_ok(self) -> None:
-            self.end_response(http.HTTPStatus.OK)
+            def handle_play_request(self) -> None:
+                def parse_song(path: str) -> str:
+                    quoted_song = path[len(PLAY_PATH_PREFIX):]
+                    return urllib.parse.unquote(quoted_song)
 
-        def handle_play_request(self) -> None:
-            def parse_song(path: str) -> str:
-                quoted_song = path[len(PLAY_PATH_PREFIX):]
-                return urllib.parse.unquote(quoted_song)
+                song = parse_song(self.path)
+                player.play(song)
 
-            song = parse_song(self.path)
-            player.play(song)
+            def serve_status(self) -> None:
+                status = player.status_json()
+                self.wfile.write(str.encode(status))
 
-        def serve_status(self) -> None:
-            status = player.status_json()
-            self.wfile.write(str.encode(status))
-
-    
-    server_address = ('', 8000)
-    server = http.server.HTTPServer(server_address, RequestHandler)
-    server.serve_forever()
+        
+        server_address = ('', 8000)
+        server = http.server.HTTPServer(server_address, RequestHandler)
+        server.serve_forever()
 

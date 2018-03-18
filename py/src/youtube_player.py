@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 
-from typing import NamedTuple, Dict, Optional, List
+from typing import NamedTuple, Dict, Optional, List, Callable, Any
 import pathlib
 import json
 import subprocess
@@ -17,6 +17,10 @@ from pyquery import PyQuery
 class SubprocessError(BaseException):
 
     pass
+
+
+def collapse_whitespace(s: str) -> str:
+    return ' '.join(s.split())
 
 
 def run_safely(*subprocess_args: str) -> str:
@@ -53,28 +57,11 @@ def download_url(url: str, output_path: str) -> None:
         url)
 
 
-class SongNotCached(BaseException):
-
-    pass
-
-
-class SongMedia(NamedTuple):
-
-    title: str
-    vlc_media: vlc.Media
-
-
 def file_exists(path: str) -> bool:
     return pathlib.Path(path).is_file()
 
 
-class YoutubeVideo(NamedTuple):
-
-    title: str
-    url: str
-
-
-def find_on_youtube(search_query: str) -> YoutubeVideo:
+def find_on_youtube(search_query: str) -> str:
     def get_html(search_query: str) -> str:
         search_query = urllib.parse.quote(search_query)
         url = f'https://www.youtube.com/results?search_query={search_query}'
@@ -84,17 +71,16 @@ def find_on_youtube(search_query: str) -> YoutubeVideo:
         query = PyQuery(html)
         match = query('a#video-title').eq(0)
         href = match.attr("href")
-        return f'https://www.youtube.com/{href}'
+        return f'https://www.youtube.com{href}'
 
-    def parse_html(html: str) -> YoutubeVideo:
-        url = top_video_url(html)
-        video = pafy.new(url)
-        return YoutubeVideo(
-            title=video.title,
-            url=video.getbestaudio().url)
+    def direct_audio_url(video_url: str) -> str:
+        video = pafy.new(video_url)
+        audio = video.getbestaudio()
+        return str(audio.url)
 
     html = get_html(search_query)
-    return parse_html(html)
+    video_url = top_video_url(html)
+    return direct_audio_url(video_url)
 
 
 class YoutubePlayer:
@@ -104,36 +90,38 @@ class YoutubePlayer:
     def __init__(self, database_path: str) -> None:
         self.database_path = database_path
         self.vlc_player = vlc.MediaPlayer()
-        self.song = ''
+        self.current_song = ''
         self.set_volume(100)
 
     def play(self, song: str) -> None:
-        song = song.lower()
-        title, media = self.song_media(song)
-        self.song = title
+        song = collapse_whitespace(song).lower()
+        if self.song_is_cached(song):
+            print('Cached')
+            self.play_from_cache(song)
+        else:
+            url = find_on_youtube(song)
+            self.cache_song(song, url)
+            self.play_online(url)
+        self.current_song = song
+
+    def song_is_cached(self, song: str) -> bool:
+        return file_exists(self.cached_song_path(song))
+
+    def cache_song(self, song: str, url: str) -> None:
+        download_url(url, self.cached_song_path(song))
+
+    def play_from_cache(self, song: str) -> None:
+        self.play_vlc_media(self.cached_song_media(song))
+
+    def play_online(self, url: str) -> None:
+        media = vlc.Media(url)
         self.play_vlc_media(media)
 
-    def song_media(self, song: str) -> vlc.Media:
-        def cached_song_media(path: str) -> Optional[vlc.Media]:
-            if not file_exists(path):
-                return None
-            return vlc.Media(path)
+    def cached_song_path(self, song: str) -> str:
+        return f'{self.database_path}/{song}'
 
-        def online_song_media(url: str) -> vlc.Media:
-            return vlc.Media(url)
-
-        # FIXME This function is a bit too long
-
-        cached_song_path = f'{self.database_path}/{song}'
-        cached_media = cached_song_media(cached_song_path)
-
-        if (cached_media):
-            return SongMedia(song, cached_media)
-
-        title, url = find_on_youtube(song)
-        online_media = online_song_media(url)
-        download_url(url, cached_song_path)
-        return SongMedia(title, online_media)
+    def cached_song_media(self, song: str) -> vlc.Media:
+        return vlc.Media(self.cached_song_path(song))
 
     def play_vlc_media(self, media: vlc.Media) -> None:
         self.vlc_player.set_media(media)
@@ -147,6 +135,10 @@ class YoutubePlayer:
 
     def is_playing(self) -> bool:
         return bool(self.vlc_player.get_state() == vlc.State.Playing)
+
+    def playback_done(self) -> bool:
+        return bool(self.vlc_player.get_state() == vlc.State.NothingSpecial or
+                    self.vlc_player.get_state() == vlc.State.Ended)
 
     def increase_volume(self, delta: int=DEFAULT_VOLUME_DELTA) -> None:
         self.set_volume(self.volume() + delta)
@@ -177,19 +169,24 @@ class YoutubePlayer:
             else:
                 return 'unknown'
 
-        def song_str() -> str:
+        def current_song_str() -> str:
             if self.is_playing() or self.is_paused():
-                return self.song
+                return self.current_song
             else:
                 return ''
 
         return {
             'volume': str(self.volume()),
-            'song': song_str(),
+            'song': current_song_str(),
             'state': state_str()
         }
 
     def status_json(self) -> str:
         return json.dumps(self.status())
 
+    def on_playback_done(self, callback: Callable[[], None]) -> None:
+        event_manager = self.vlc_player.event_manager()
+        event_manager.event_attach(
+            vlc.EventType.MediaPlayerEndReached,
+            lambda ev: callback())
 
