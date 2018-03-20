@@ -13,8 +13,9 @@ serverUrl =
 
 type alias ServerStatus =
   { volume : String
-  , song : String
+  , currentSong : String
   , state: String
+  , songQueue: List String
   }
 
 
@@ -38,11 +39,12 @@ type alias Model =
 
 statusDecoder : Json.Decode.Decoder ServerStatus
 statusDecoder =
-  Json.Decode.map3
+  Json.Decode.map4
     ServerStatus
     (Json.Decode.field "volume" Json.Decode.string)
-    (Json.Decode.field "song" Json.Decode.string)
+    (Json.Decode.field "currentSong" Json.Decode.string)
     (Json.Decode.field "state" Json.Decode.string)
+    (Json.Decode.field "songQueue" (Json.Decode.list Json.Decode.string))
 
 
 playRequest : String -> Http.Request ServerStatus
@@ -109,8 +111,9 @@ emptyModel =
 emptyServerStatus : ServerStatus
 emptyServerStatus =
   { volume = "100"
-  , song = "-"
-  , state = "-"
+  , currentSong = ""
+  , state = ""
+  , songQueue = []
   }
 
 
@@ -198,31 +201,51 @@ view model =
 
         , volumeControl serverStatus.volume
 
-        , songDiv serverStatus.song
+        , currentSongDiv serverStatus.currentSong
+        , simpleBr
+
+        , songQueueDiv serverStatus.songQueue
         ]
 
     Err err ->
       errorDiv err
 
 
-songDiv : String -> Html Msg
-songDiv song =
-  let
-    songText =
-      if song == "" then
-        "-"
-
-      else
-        song
-  in
+currentSongDiv : String -> Html Msg
+currentSongDiv currentSong =
+  if currentSong == "" then
+    Html.div [] []
+  else
     Html.div
       []
-      [Html.text ("Song: " ++ songText)]
+      [ Html.text ("Current Song: " ++ currentSong)
+      ]
+
+
+songQueueDiv : List String -> Html Msg
+songQueueDiv songQueue =
+  let
+    subdivs =
+      List.map songDiv (List.reverse songQueue)
+  in
+    if songQueue == [] then
+      Html.div [] []
+    else
+      Html.div
+        []
+        ([Html.text "Song Queue: ", simpleBr] ++ subdivs)
+
+
+songDiv : String -> Html Msg
+songDiv song =
+    Html.div
+      []
+      [Html.text song, simpleBr]
 
 
 playButton : Html Msg
 playButton =
-  simpleHtmlButton PlaySong "Play New"
+  simpleHtmlButton PlaySong "Play"
 
 
 increaseVolumeButton : Html Msg
@@ -237,22 +260,15 @@ decreaseVolumeButton =
 
 togglePauseButton : String -> Html Msg
 togglePauseButton state =
-  if state == "unknown" then
-    Html.div [] []
-  else
-    let
-      text =
-        case state of
-          "playing" ->
-            "Pause"
+  case state of
+    "playing" ->
+      Html.div [] [simpleHtmlButton TogglePause "Pause"]
 
-          "paused" ->
-            "Continue"
+    "paused" ->
+      Html.div [] [simpleHtmlButton TogglePause "Continue"]
 
-          _ ->
-            "?"
-    in
-      simpleHtmlButton TogglePause text
+    _ ->
+      Html.div [] []
 
 
 simpleHtmlButton : Msg -> String -> Html Msg

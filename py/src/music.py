@@ -3,7 +3,6 @@
 
 from typing import NamedTuple, Dict, Optional, List, Callable, Any
 import pathlib
-import json
 import subprocess
 import urllib.parse
 import io
@@ -51,6 +50,7 @@ def download_url(url: str, output_path: str) -> None:
     touch(output_path)
     run_safely(
         'wget',
+        '-q',
         '-b',
         '-O', output_path,
         '-t', '1',
@@ -94,21 +94,26 @@ class YoutubePlayer:
         self.set_volume(100)
 
     def play(self, song: str) -> None:
-        song = collapse_whitespace(song).lower()
-        if self.song_is_cached(song):
-            print('Cached')
-            self.play_from_cache(song)
-        else:
-            url = find_on_youtube(song)
-            self.cache_song(song, url)
-            self.play_online(url)
-        self.current_song = song
+        if song:
+            song = collapse_whitespace(song).lower()
+            if self.song_is_cached(song):
+                self.play_from_cache(song)
+            else:
+                url = find_on_youtube(song)
+                self.cache_song(song, url)
+                self.play_online(url)
+            self.current_song = song
 
     def song_is_cached(self, song: str) -> bool:
         return file_exists(self.cached_song_path(song))
 
     def cache_song(self, song: str, url: str) -> None:
         download_url(url, self.cached_song_path(song))
+
+    def cache_if_needed(self, song: str) -> None:
+        if not self.song_is_cached(song):
+            url = find_on_youtube(song)
+            self.cache_song(song, url)
 
     def play_from_cache(self, song: str) -> None:
         self.play_vlc_media(self.cached_song_media(song))
@@ -160,7 +165,7 @@ class YoutubePlayer:
     def close(self) -> None:
         self.vlc_player.release()
 
-    def status(self) -> Dict[str, str]:
+    def status(self) -> Dict[str, Any]:
         def state_str() -> str:
             if self.is_playing():
                 return 'playing'
@@ -177,16 +182,26 @@ class YoutubePlayer:
 
         return {
             'volume': str(self.volume()),
-            'song': current_song_str(),
+            'currentSong': current_song_str(),
             'state': state_str()
         }
 
-    def status_json(self) -> str:
-        return json.dumps(self.status())
 
-    def on_playback_done(self, callback: Callable[[], None]) -> None:
-        event_manager = self.vlc_player.event_manager()
-        event_manager.event_attach(
-            vlc.EventType.MediaPlayerEndReached,
-            lambda ev: callback())
+class SongLoop:
+
+    def __init__(self, player: YoutubePlayer) -> None:
+        self.player = player
+        self.song_queue: List[str] = []
+    
+    def add_song(self, song: str) -> None:
+        if self.player.playback_done():
+            self.player.play(song)
+        else:
+            self.player.cache_if_needed(song)
+            self.song_queue.insert(0, song)
+
+    def update(self) -> None:
+        if self.player.playback_done() and self.song_queue:
+            next_song = self.song_queue.pop()
+            self.player.play(next_song)
 

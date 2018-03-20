@@ -7,28 +7,16 @@ import shutil
 import urllib.parse
 import io
 import contextlib
+import json
 
+import music
 
-from youtube_player import YoutubePlayer, SongQueue
-
-
-p = YoutubePlayer('./db')
-s = SongQueue(p)
-
-s.add_song('taste the rainbow motherfucker')
-s.add_song('heavydirtysoul')
-
-while True:
-    pass
 
 SONG_DATABASE_PATH = './db'
-
-
 STATUS_PATH = '/status'
 TOGGLE_PAUSE_PATH = '/togglepause'
 INCREASE_VOLUME_PATH = '/increasevolume'
 DECREASE_VOLUME_PATH = '/decreasevolume'
-
 PLAY_PATH_PREFIX = '/play/'
 
 
@@ -36,8 +24,14 @@ class InvalidRequest(BaseException):
 
     pass
 
+
 if __name__ == '__main__':
-    with contextlib.closing(YoutubePlayer(SONG_DATABASE_PATH)) as player:
+    def youtube_player() -> music.YoutubePlayer:
+        return music.YoutubePlayer(SONG_DATABASE_PATH)
+
+    with contextlib.closing(youtube_player()) as player:
+        song_loop = music.SongLoop(player)
+
         class RequestHandler(http.server.SimpleHTTPRequestHandler):
 
             def do_GET(self) -> None:
@@ -79,14 +73,20 @@ if __name__ == '__main__':
                     return urllib.parse.unquote(quoted_song)
 
                 song = parse_song(self.path)
-                player.play(song)
+                song_loop.add_song(song)
 
             def serve_status(self) -> None:
-                status = player.status_json()
-                self.wfile.write(str.encode(status))
+                status = player.status()
+                status['songQueue'] = song_loop.song_queue
+                status_json = json.dumps(status)
+                print(status_json)
+                self.wfile.write(str.encode(status_json))
 
         
         server_address = ('', 8000)
-        server = http.server.HTTPServer(server_address, RequestHandler)
-        server.serve_forever()
+        server = http.server.HTTPServer(server_address, RequestHandler) 
+
+        while True:
+            song_loop.update()
+            server.handle_request()
 
