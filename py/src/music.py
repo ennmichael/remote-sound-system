@@ -47,14 +47,7 @@ def load_webpage(url: str) -> str:
 
 
 def download_url(url: str, output_path: str) -> None:
-    touch(output_path)
-    run_safely(
-        'wget',
-        '-q',
-        '-b',
-        '-O', output_path,
-        '-t', '1',
-        url)
+    run_safely('./py/src/download.py', url, output_path, '&')
 
 
 def file_exists(path: str) -> bool:
