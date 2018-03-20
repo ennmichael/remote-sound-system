@@ -22,8 +22,5 @@ def download_url(url: str, output_path: str) -> None:
 if __name__ == '__main__':
     url = sys.argv[1]
     output_path = sys.argv[2]
-
-    print(url, output_path)
-
     download_url(url, output_path)
 
