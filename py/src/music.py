@@ -6,6 +6,7 @@ import pathlib
 import subprocess
 import urllib.parse
 import io
+import os
 
 import vlc
 import pafy
@@ -22,11 +23,12 @@ def collapse_whitespace(s: str) -> str:
     return ' '.join(s.split())
 
 
-def run_safely(*subprocess_args: str) -> str:
+def run_safely(*subprocess_args: str, background: bool=False) -> str:
     process = subprocess.run(
         subprocess_args,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
+        stderr=subprocess.PIPE,
+        creationflags = subprocess.CREATE_NEW_CONSOLE if background else 0)
 
     if process.returncode != 0:
         raise SubprocessError(process.stderr)
@@ -47,7 +49,7 @@ def load_webpage(url: str) -> str:
 
 
 def download_url(url: str, output_path: str) -> None:
-    run_safely('./py/src/download.py', url, output_path, '&')
+    os.system(f'./py/src/download.py "{url}" "{output_path}" &')
 
 
 def file_exists(path: str) -> bool:
@@ -93,8 +95,8 @@ class YoutubePlayer:
                 self.play_from_cache(song)
             else:
                 url = find_on_youtube(song)
-                self.cache_song(song, url)
                 self.play_online(url)
+                self.cache_song(song, url)
             self.current_song = song
 
     def song_is_cached(self, song: str) -> bool:
@@ -190,8 +192,8 @@ class SongLoop:
         if self.player.playback_done():
             self.player.play(song)
         else:
-            self.player.cache_if_needed(song)
             self.song_queue.insert(0, song)
+            self.player.cache_if_needed(song)
 
     def update(self) -> None:
         if self.player.playback_done() and self.song_queue:

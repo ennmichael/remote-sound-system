@@ -79,7 +79,7 @@ if __name__ == '__main__':
                 status = player.status()
                 status['songQueue'] = song_loop.song_queue
                 status_json = json.dumps(status)
-                print(status_json)
+                print(song_loop.song_queue)
                 self.wfile.write(str.encode(status_json))
 
         
