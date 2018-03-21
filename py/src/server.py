@@ -12,6 +12,7 @@ import json
 import music
 
 
+REQUEST_TIMEOUT = 5
 SONG_DATABASE_PATH = './db'
 STATUS_PATH = '/status'
 TOGGLE_PAUSE_PATH = '/togglepause'
@@ -83,7 +84,8 @@ if __name__ == '__main__':
 
         
         server_address = ('', 8000)
-        server = http.server.HTTPServer(server_address, RequestHandler) 
+        server = http.server.HTTPServer(server_address, RequestHandler)
+        server.timeout = REQUEST_TIMEOUT
 
         while True:
             song_loop.update()

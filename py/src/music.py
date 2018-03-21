@@ -89,15 +89,13 @@ class YoutubePlayer:
         self.set_volume(100)
 
     def play(self, song: str) -> None:
-        if song:
-            song = collapse_whitespace(song).lower()
-            if self.song_is_cached(song):
-                self.play_from_cache(song)
-            else:
-                url = find_on_youtube(song)
-                self.play_online(url)
-                self.cache_song(song, url)
-            self.current_song = song
+        if self.song_is_cached(song):
+            self.play_from_cache(song)
+        else:
+            url = find_on_youtube(song)
+            self.play_online(url)
+            self.cache_song(song, url)
+        self.current_song = song
 
     def song_is_cached(self, song: str) -> bool:
         return file_exists(self.cached_song_path(song))
@@ -189,11 +187,13 @@ class SongLoop:
         self.song_queue: List[str] = []
     
     def add_song(self, song: str) -> None:
-        if self.player.playback_done():
-            self.player.play(song)
-        else:
-            self.song_queue.insert(0, song)
-            self.player.cache_if_needed(song)
+        if song:
+            song = collapse_whitespace(song).lower()
+            if self.player.playback_done():
+                self.player.play(song)
+            else:
+                self.song_queue.insert(0, song)
+                self.player.cache_if_needed(song)
 
     def update(self) -> None:
         if self.player.playback_done() and self.song_queue:
